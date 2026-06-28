@@ -21,6 +21,8 @@ from .admin_serializers import (
     DietItemSerializer,
     DietPlanSerializer,
     FaqSerializer,
+    OnboardingAnswerSerializer,
+    OnboardingQuestionSerializer,
     PackagePlanSerializer,
     PatientProgressPhotoSerializer,
     PatientProgressPhotoUploadSerializer,
@@ -37,6 +39,8 @@ from .models import (
     DietPlan,
     DietPlanItem,
     Faq,
+    OnboardingAnswer,
+    OnboardingQuestion,
     PackagePlan,
     PatientProfile,
     PatientProgressPhoto,
@@ -803,6 +807,18 @@ class AdminPatientDietPlanListView(APIView):
                 pass
 
         plan.refresh_from_db()
+
+        try:
+            from accounts.push_service import send_push_to_users
+            send_push_to_users(
+                [patient],
+                title="Yeni Diyet Planınız Hazır",
+                body="Terapistiniz size yeni bir diyet planı atadı. Kontrol edin!",
+                data={"notification_type": "diet_assigned", "link": "/hesabim/diyet"},
+            )
+        except Exception:
+            pass
+
         return Response(DietPlanSerializer(plan).data, status=status.HTTP_201_CREATED)
 
 
@@ -1033,3 +1049,57 @@ class AdminSendNotificationView(APIView):
             )
 
         return Response({"sent_to": len(users)}, status=status.HTTP_200_OK)
+
+
+class AdminOnboardingQuestionListView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        questions = OnboardingQuestion.objects.all()
+        return Response(OnboardingQuestionSerializer(questions, many=True).data)
+
+    def post(self, request):
+        serializer = OnboardingQuestionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminOnboardingQuestionDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        try:
+            return OnboardingQuestion.objects.get(pk=pk)
+        except OnboardingQuestion.DoesNotExist:
+            return None
+
+    def put(self, request, pk):
+        question = self._get(pk)
+        if not question:
+            return Response({"detail": "Bulunamadı."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = OnboardingQuestionSerializer(question, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        question = self._get(pk)
+        if not question:
+            return Response({"detail": "Bulunamadı."}, status=status.HTTP_404_NOT_FOUND)
+        question.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminPatientOnboardingAnswersView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request, pk):
+        try:
+            patient = User.objects.get(pk=pk, is_staff=False, is_superuser=False)
+        except User.DoesNotExist:
+            return Response({"detail": "Öğrenci bulunamadı."}, status=404)
+        answers = OnboardingAnswer.objects.filter(user=patient).select_related("question")
+        return Response(OnboardingAnswerSerializer(answers, many=True).data)

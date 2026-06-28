@@ -14,7 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .admin_serializers import PackagePlanSerializer
-from .models import FCMDevice, PackagePlan, PatientProfile, WeightHistory
+from .models import BodyMeasurement, FCMDevice, OnboardingAnswer, OnboardingQuestion, PackagePlan, PatientProfile, WeightHistory
 from .serializers import (
     ChangePasswordSerializer,
     CustomTokenObtainPairSerializer,
@@ -92,6 +92,18 @@ class MyPackagesView(APIView):
             patient=request.user
         ).select_related("created_by")
         return Response(SessionPackageSerializer(packages, many=True).data)
+
+
+class PatientBodyMeasurementListView(APIView):
+    """Hastanın kendi vücut ölçümlerini listeler."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .admin_serializers import BodyMeasurementSerializer
+
+        measurements = BodyMeasurement.objects.filter(patient=request.user).order_by("-date")
+        return Response(BodyMeasurementSerializer(measurements, many=True).data)
 
 
 class FCMDeviceRegisterView(APIView):
@@ -243,3 +255,40 @@ class WeightHistoryListCreateView(generics.ListCreateAPIView):
         profile, _ = PatientProfile.objects.get_or_create(user=self.request.user)
         profile.weight = entry.weight
         profile.save(update_fields=["weight", "updated_at"])
+
+
+class OnboardingQuestionsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .admin_serializers import PatientOnboardingQuestionSerializer
+        questions = OnboardingQuestion.objects.filter(is_active=True)
+        return Response(PatientOnboardingQuestionSerializer(questions, many=True).data)
+
+
+class OnboardingSubmitView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        answers_data = request.data.get("answers", [])
+        if not isinstance(answers_data, list):
+            return Response({"detail": "answers must be a list."}, status=status.HTTP_400_BAD_REQUEST)
+
+        for item in answers_data:
+            qid = item.get("question_id")
+            answer_value = item.get("answer")
+            try:
+                question = OnboardingQuestion.objects.get(pk=qid, is_active=True)
+            except OnboardingQuestion.DoesNotExist:
+                continue
+            OnboardingAnswer.objects.update_or_create(
+                user=request.user,
+                question=question,
+                defaults={"answer": answer_value},
+            )
+
+        profile, _ = PatientProfile.objects.get_or_create(user=request.user)
+        profile.onboarding_completed = True
+        profile.save(update_fields=["onboarding_completed", "updated_at"])
+
+        return Response({"completed": True})

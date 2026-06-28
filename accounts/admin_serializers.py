@@ -10,6 +10,8 @@ from .models import (
     DietPlan,
     DietPlanItem,
     Faq,
+    OnboardingAnswer,
+    OnboardingQuestion,
     PackagePlan,
     PatientProfile,
     PatientProgressPhoto,
@@ -525,3 +527,25 @@ class DietPlanSerializer(serializers.ModelSerializer):
 
     def get_meal_type_label(self, obj):
         return dict(DietPlan.MEAL_CHOICES).get(obj.meal_type, obj.meal_type)
+
+
+class OnboardingQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OnboardingQuestion
+        fields = ["id", "text", "question_type", "options", "is_required", "sort_order", "is_active", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
+class PatientOnboardingQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OnboardingQuestion
+        fields = ["id", "text", "question_type", "options", "is_required", "sort_order"]
+
+
+class OnboardingAnswerSerializer(serializers.ModelSerializer):
+    question_text = serializers.CharField(source="question.text", read_only=True)
+    question_type = serializers.CharField(source="question.question_type", read_only=True)
+
+    class Meta:
+        model = OnboardingAnswer
+        fields = ["id", "question", "question_text", "question_type", "answer", "answered_at"]

@@ -10,6 +10,7 @@ from .models import PatientProfile, WeightHistory
 
 class UserPublicSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    onboarding_completed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -22,10 +23,19 @@ class UserPublicSerializer(serializers.ModelSerializer):
             "full_name",
             "is_staff",
             "is_superuser",
+            "onboarding_completed",
         ]
 
     def get_full_name(self, obj):
         return obj.get_full_name() or obj.username
+
+    def get_onboarding_completed(self, obj):
+        if obj.is_staff or obj.is_superuser:
+            return True
+        try:
+            return obj.patient_profile.onboarding_completed
+        except Exception:
+            return False
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

@@ -154,12 +154,46 @@ class FCMDevice(models.Model):
         return f"{self.user.username} — {self.token[:16]}…"
 
 
+class OnboardingQuestion(models.Model):
+    class QuestionType(models.TextChoices):
+        TEXT = "text", "Açık Metin"
+        CHOICE = "choice", "Çoktan Seçmeli"
+        SCALE = "scale", "Skala (1-10)"
+        MULTI = "multi", "Çoklu Seçim"
+
+    text = models.CharField(max_length=500)
+    question_type = models.CharField(max_length=20, choices=QuestionType.choices, default=QuestionType.TEXT)
+    options = models.JSONField(default=list, blank=True)
+    is_required = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "created_at"]
+
+
+class OnboardingAnswer(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="onboarding_answers",
+    )
+    question = models.ForeignKey(OnboardingQuestion, on_delete=models.CASCADE, related_name="answers")
+    answer = models.JSONField()
+    answered_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("user", "question")]
+
+
 class PatientProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="patient_profile",
     )
+    onboarding_completed = models.BooleanField(default=False)
     height = models.FloatField(
         null=True,
         blank=True,
