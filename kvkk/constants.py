@@ -1,0 +1,1 @@
+KVKK_POLICY_VERSION = "v1.0"
