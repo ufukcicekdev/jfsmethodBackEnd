@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .admin_views import (
+    AdminSendNotificationView,
     AdminAppointmentListView,
     AdminAppointmentStatusView,
     AdminAttendanceView,
@@ -139,6 +140,11 @@ urlpatterns = [
         "schedule/cancel-day/",
         AdminCancelDayView.as_view(),
         name="admin-cancel-day",
+    ),
+    path(
+        "notifications/send/",
+        AdminSendNotificationView.as_view(),
+        name="admin-send-notification",
     ),
     path(
         "notifications/",

@@ -995,3 +995,41 @@ AdminLandingTreatmentListView, AdminLandingTreatmentDetailView, PublicLandingTre
 
 AdminLandingWhyUsListView, AdminLandingWhyUsDetailView, PublicLandingWhyUsView = \
     _landing_crud_views(LandingWhyUsItem, LandingWhyUsItemSerializer)
+
+
+class AdminSendNotificationView(APIView):
+    permission_classes = [IsStaff]
+
+    def post(self, request):
+        from .push_service import send_push_to_users
+
+        title = request.data.get("title", "").strip()
+        body = request.data.get("body", "").strip()
+        patient_ids = request.data.get("patient_ids")
+
+        if not title or not body:
+            return Response(
+                {"detail": "Başlık ve mesaj alanları zorunludur."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if patient_ids:
+            users = list(
+                User.objects.filter(
+                    pk__in=patient_ids, is_staff=False, is_superuser=False, is_active=True
+                )
+            )
+        else:
+            users = list(
+                User.objects.filter(is_staff=False, is_superuser=False, is_active=True)
+            )
+
+        if users:
+            send_push_to_users(
+                users,
+                title=title,
+                body=body,
+                data={"notification_type": "general", "link": "/hesabim"},
+            )
+
+        return Response({"sent_to": len(users)}, status=status.HTTP_200_OK)
