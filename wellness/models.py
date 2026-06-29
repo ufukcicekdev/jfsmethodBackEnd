@@ -169,20 +169,20 @@ class NotificationSchedule(models.Model):
     notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     title = models.CharField(max_length=120)
     message = models.TextField()
-    send_time = models.TimeField()
+    send_times = models.JSONField(default=list, help_text='["HH:MM", ...] formatında saat listesi')
     days_of_week = models.JSONField(default=list, help_text="[0-6], 0=Pzt")
     is_enabled = models.BooleanField(default=True)
-    last_triggered_date = models.DateField(null=True, blank=True)
+    last_triggered_times = models.JSONField(default=dict, help_text='{"YYYY-MM-DD:HH:MM": true} çift gönderim engeli')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["send_time"]
+        ordering = ["notification_type"]
         verbose_name = "Bildirim Zamanlaması"
         verbose_name_plural = "Bildirim Zamanlamaları"
 
     def __str__(self):
-        return f"{self.get_notification_type_display()} — {self.send_time}"
+        return f"{self.get_notification_type_display()} — {', '.join(self.send_times)}"
 
 
 class ExerciseCompletion(models.Model):

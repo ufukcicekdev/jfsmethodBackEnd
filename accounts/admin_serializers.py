@@ -226,6 +226,7 @@ class AdminPatientDetailSerializer(AdminPatientListSerializer):
 
     def get_attendance(self, obj):
         from django.utils import timezone
+        from accounts.models import AttendanceRecord
 
         now = timezone.now()
         appts = (
@@ -233,13 +234,15 @@ class AdminPatientDetailSerializer(AdminPatientListSerializer):
             .select_related("doctor")
             .order_by("-appointment_datetime")
         )
-        completed = appts.filter(status="completed").count()
-        no_show = appts.filter(status="no_show").count()
         cancelled = appts.filter(status="cancelled").count()
         upcoming = appts.filter(
             status__in=["pending", "approved"],
             appointment_datetime__gte=now,
         ).count()
+
+        # Geldi/Gelmedi sayıları AttendanceRecord'dan (liste kartındaki butonlarla aynı kaynak)
+        completed = AttendanceRecord.objects.filter(patient=obj, status="came").count()
+        no_show = AttendanceRecord.objects.filter(patient=obj, status="no_show").count()
 
         history = [
             {

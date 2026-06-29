@@ -30,14 +30,14 @@ class NotificationScheduleSerializer(drf_serializers.ModelSerializer):
             "notification_type_label",
             "title",
             "message",
-            "send_time",
+            "send_times",
             "days_of_week",
             "is_enabled",
-            "last_triggered_date",
+            "last_triggered_times",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "last_triggered_date", "created_at", "updated_at"]
+        read_only_fields = ["id", "last_triggered_times", "created_at", "updated_at"]
 
 
 class NotificationScheduleListCreateView(APIView):
@@ -84,7 +84,7 @@ class NotificationScheduleDetailView(APIView):
 
 
 class NotificationScheduleTestView(APIView):
-    """Schedule'ı zaman kontrolü olmadan anında gönderir (test amaçlı)."""
+    """Schedule'ı zaman ve saat kontrolü olmadan anında gönderir (test)."""
     permission_classes = [IsStaff]
 
     def post(self, request, pk):
@@ -93,9 +93,24 @@ class NotificationScheduleTestView(APIView):
         except NotificationSchedule.DoesNotExist:
             return Response({"detail": "Bulunamadı."}, status=404)
 
-        from django.core.management import call_command
-        call_command("fire_scheduled_notifications", force_id=pk)
-        return Response({"detail": "Test bildirimi gönderildi."})
+        from wellness.management.commands.fire_scheduled_notifications import (
+            _get_target_users, LINK_MAP
+        )
+        from accounts.push_service import send_push_to_users
+
+        users = _get_target_users(schedule.notification_type)
+        link = LINK_MAP.get(schedule.notification_type, "/hesabim")
+
+        if not users:
+            return Response({"detail": "Hedef kullanıcı bulunamadı (kimse şartı karşılamıyor)."})
+
+        send_push_to_users(
+            users,
+            title=schedule.title,
+            body=schedule.message,
+            data={"link": link, "notification_type": schedule.notification_type},
+        )
+        return Response({"detail": f"Test bildirimi gönderildi → {len(users)} kullanıcı."})
 
 
 class AdminExerciseListView(APIView):
