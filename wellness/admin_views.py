@@ -132,7 +132,7 @@ class AdminPatientExerciseListCreateView(APIView):
                 title="Yeni ev egzersizi",
                 body=f"Terapistiniz '{exercise.title}' egzersizini programınıza ekledi.",
                 data={
-                    "link": "/hesabim/dijital-ikiz",
+                    "link": "/hesabim/egzersizlerim",
                     "notification_type": "exercise",
                 },
             )
