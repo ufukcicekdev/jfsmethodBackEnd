@@ -159,6 +159,32 @@ class DailyStepLog(models.Model):
         return f"{self.patient.username} — {self.date}: {self.step_count} adım"
 
 
+class NotificationSchedule(models.Model):
+    TYPE_CHOICES = [
+        ("water",    "Su Hatırlatması"),
+        ("steps",    "Adım Hatırlatması"),
+        ("exercise", "Egzersiz Hatırlatması"),
+        ("custom",   "Özel Mesaj"),
+    ]
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    title = models.CharField(max_length=120)
+    message = models.TextField()
+    send_time = models.TimeField()
+    days_of_week = models.JSONField(default=list, help_text="[0-6], 0=Pzt")
+    is_enabled = models.BooleanField(default=True)
+    last_triggered_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["send_time"]
+        verbose_name = "Bildirim Zamanlaması"
+        verbose_name_plural = "Bildirim Zamanlamaları"
+
+    def __str__(self):
+        return f"{self.get_notification_type_display()} — {self.send_time}"
+
+
 class ExerciseCompletion(models.Model):
     assignment = models.ForeignKey(
         ExerciseAssignment,

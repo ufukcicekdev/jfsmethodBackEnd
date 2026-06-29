@@ -6,13 +6,96 @@ from rest_framework.views import APIView
 
 from accounts.permissions import IsStaff
 
-from .models import Exercise, ExerciseAssignment
+from rest_framework import serializers as drf_serializers
+
+from .models import Exercise, ExerciseAssignment, NotificationSchedule
 from .serializers import (
     ExerciseAssignSerializer,
     ExerciseAssignmentSerializer,
     ExerciseSerializer,
     ExerciseWriteSerializer,
 )
+
+
+class NotificationScheduleSerializer(drf_serializers.ModelSerializer):
+    notification_type_label = drf_serializers.CharField(
+        source="get_notification_type_display", read_only=True
+    )
+
+    class Meta:
+        model = NotificationSchedule
+        fields = [
+            "id",
+            "notification_type",
+            "notification_type_label",
+            "title",
+            "message",
+            "send_time",
+            "days_of_week",
+            "is_enabled",
+            "last_triggered_date",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "last_triggered_date", "created_at", "updated_at"]
+
+
+class NotificationScheduleListCreateView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        schedules = NotificationSchedule.objects.all()
+        return Response(NotificationScheduleSerializer(schedules, many=True).data)
+
+    def post(self, request):
+        serializer = NotificationScheduleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        schedule = serializer.save()
+        return Response(
+            NotificationScheduleSerializer(schedule).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class NotificationScheduleDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def get_object(self, pk):
+        try:
+            return NotificationSchedule.objects.get(pk=pk)
+        except NotificationSchedule.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        schedule = self.get_object(pk)
+        if not schedule:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        serializer = NotificationScheduleSerializer(schedule, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        schedule = serializer.save()
+        return Response(NotificationScheduleSerializer(schedule).data)
+
+    def delete(self, request, pk):
+        schedule = self.get_object(pk)
+        if not schedule:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        schedule.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class NotificationScheduleTestView(APIView):
+    """Schedule'ı zaman kontrolü olmadan anında gönderir (test amaçlı)."""
+    permission_classes = [IsStaff]
+
+    def post(self, request, pk):
+        try:
+            schedule = NotificationSchedule.objects.get(pk=pk)
+        except NotificationSchedule.DoesNotExist:
+            return Response({"detail": "Bulunamadı."}, status=404)
+
+        from django.core.management import call_command
+        call_command("fire_scheduled_notifications", force_id=pk)
+        return Response({"detail": "Test bildirimi gönderildi."})
 
 
 class AdminExerciseListView(APIView):

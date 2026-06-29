@@ -5,6 +5,9 @@ from .admin_views import (
     AdminExerciseListView,
     AdminPatientExerciseDeactivateView,
     AdminPatientExerciseListCreateView,
+    NotificationScheduleDetailView,
+    NotificationScheduleListCreateView,
+    NotificationScheduleTestView,
 )
 from .views import (
     CompleteExerciseView,
@@ -50,5 +53,20 @@ admin_urlpatterns = [
         "patients/<int:pk>/exercises/<int:assignment_id>/",
         AdminPatientExerciseDeactivateView.as_view(),
         name="admin-patient-exercise-deactivate",
+    ),
+    path(
+        "notification-schedules/",
+        NotificationScheduleListCreateView.as_view(),
+        name="admin-notification-schedules",
+    ),
+    path(
+        "notification-schedules/<int:pk>/",
+        NotificationScheduleDetailView.as_view(),
+        name="admin-notification-schedule-detail",
+    ),
+    path(
+        "notification-schedules/<int:pk>/test/",
+        NotificationScheduleTestView.as_view(),
+        name="admin-notification-schedule-test",
     ),
 ]
