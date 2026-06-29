@@ -135,6 +135,7 @@ class PatientProfileSerializer(serializers.ModelSerializer):
             "target_hip",
             "target_chest",
             "target_body_fat",
+            "daily_water_goal_ml",
             "updated_at",
         ]
         read_only_fields = ["updated_at"]

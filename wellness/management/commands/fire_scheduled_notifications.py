@@ -28,15 +28,19 @@ def _get_target_users(notification_type):
     )
 
     if notification_type == "water":
-        logged_enough = set(
-            DailyWaterLog.objects.filter(date=today, ml_consumed__gte=500)
-            .values_list("patient_id", flat=True)
-        )
-        return [p for p in patients if p.id not in logged_enough]
+        from accounts.models import PatientProfile
+        # Kişiye özel su hedefine ulaşmış olanları çıkar
+        reached = set()
+        for log in DailyWaterLog.objects.filter(date=today).select_related("patient"):
+            profile = PatientProfile.objects.filter(user=log.patient).first()
+            goal = profile.daily_water_goal_ml if profile else 2000
+            if log.ml_consumed >= goal:
+                reached.add(log.patient_id)
+        return [p for p in patients if p.id not in reached]
 
     elif notification_type == "steps":
         logged = set(
-            DailyStepLog.objects.filter(date=today)
+            DailyStepLog.objects.filter(date=today, step_count__gt=0)
             .values_list("patient_id", flat=True)
         )
         return [p for p in patients if p.id not in logged]

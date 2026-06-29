@@ -212,6 +212,7 @@ class PatientProfile(models.Model):
     target_hip = models.FloatField(null=True, blank=True, help_text="Hedef kalça (cm)")
     target_chest = models.FloatField(null=True, blank=True, help_text="Hedef göğüs (cm)")
     target_body_fat = models.FloatField(null=True, blank=True, help_text="Hedef yağ oranı (%)")
+    daily_water_goal_ml = models.PositiveIntegerField(default=2000, help_text="Günlük su hedefi (ml)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

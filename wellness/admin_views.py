@@ -83,6 +83,29 @@ class NotificationScheduleDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class FCMDeviceDebugView(APIView):
+    """Kayıtlı FCM cihazlarını listeler."""
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        from accounts.models import FCMDevice
+        devices = FCMDevice.objects.select_related("user").order_by("-id")
+        return Response({
+            "total": devices.count(),
+            "active": devices.filter(is_active=True).count(),
+            "devices": [
+                {
+                    "id": d.id,
+                    "user": d.user.username,
+                    "is_staff": d.user.is_staff,
+                    "is_active": d.is_active,
+                    "token_preview": d.token[:20] + "...",
+                }
+                for d in devices[:50]
+            ],
+        })
+
+
 class NotificationScheduleTestView(APIView):
     """Schedule'ı zaman ve saat kontrolü olmadan anında gönderir (test)."""
     permission_classes = [IsStaff]
