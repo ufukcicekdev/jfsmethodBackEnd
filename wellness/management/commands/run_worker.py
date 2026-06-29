@@ -31,6 +31,11 @@ class Command(BaseCommand):
             except Exception as exc:
                 logger.exception("fire_scheduled_notifications hatası: %s", exc)
                 self.stderr.write(f"Hata (devam ediliyor): {exc}")
+            finally:
+                # Her turdan sonra Django ORM query cache'ini temizle
+                from django import db
+                db.reset_queries()
+                db.close_old_connections()
 
             self.stdout.write(f"Sonraki kontrol {INTERVAL_SECONDS // 60} dakika sonra.")
             time.sleep(INTERVAL_SECONDS)
