@@ -86,9 +86,6 @@ def _send_now(tokens, title, body, data):
                     body=body,
                     icon="/icon-192.png",
                 ),
-                fcm_options=messaging.WebpushFCMOptions(
-                    link=payload_data.get("link", "/"),
-                ),
             ),
         )
         try:

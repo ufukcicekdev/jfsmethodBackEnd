@@ -623,6 +623,19 @@ class AdminBodyMeasurementListCreateView(APIView):
         serializer = BodyMeasurementSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(patient_id=patient_id)
+
+        try:
+            patient = User.objects.get(pk=patient_id)
+            from accounts.push_service import send_push_to_users
+            send_push_to_users(
+                [patient],
+                title="Yeni Ölçümleriniz Eklendi",
+                body="Terapistiniz vücut ölçümlerinizi güncelledi. Görüntülemek için tıklayın.",
+                data={"notification_type": "measurement_added", "link": "/hesabim/olcumler"},
+            )
+        except Exception:
+            pass
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
