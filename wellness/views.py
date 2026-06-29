@@ -7,7 +7,7 @@ from accounts.models import PatientProgressPhoto
 from accounts.admin_serializers import PatientProgressPhotoSerializer
 from accounts.models import WeightHistory
 
-from .models import ExerciseAssignment, ExerciseCompletion, RegionPainLog
+from .models import DailyStepLog, DailyWaterLog, ExerciseAssignment, ExerciseCompletion, RegionPainLog
 from .serializers import (
     CompleteExerciseSerializer,
     ExerciseAssignmentSerializer,
@@ -154,3 +154,49 @@ class PatientProgressPhotoListView(APIView):
                 photos, many=True, context={"request": request}
             ).data
         )
+
+
+class DailyWaterView(APIView):
+    permission_classes = [IsPatient]
+
+    def get(self, request):
+        from django.utils import timezone
+        today = timezone.localdate()
+        log, _ = DailyWaterLog.objects.get_or_create(patient=request.user, date=today)
+        return Response({"date": str(today), "ml_consumed": log.ml_consumed})
+
+    def post(self, request):
+        from django.utils import timezone
+        today = timezone.localdate()
+        ml = request.data.get("ml_consumed", 0)
+        try:
+            ml = int(ml)
+        except (ValueError, TypeError):
+            return Response({"detail": "Geçersiz değer."}, status=status.HTTP_400_BAD_REQUEST)
+        log, _ = DailyWaterLog.objects.get_or_create(patient=request.user, date=today)
+        log.ml_consumed = max(0, ml)
+        log.save(update_fields=["ml_consumed"])
+        return Response({"date": str(today), "ml_consumed": log.ml_consumed})
+
+
+class DailyStepView(APIView):
+    permission_classes = [IsPatient]
+
+    def get(self, request):
+        from django.utils import timezone
+        today = timezone.localdate()
+        log, _ = DailyStepLog.objects.get_or_create(patient=request.user, date=today)
+        return Response({"date": str(today), "step_count": log.step_count})
+
+    def post(self, request):
+        from django.utils import timezone
+        today = timezone.localdate()
+        steps = request.data.get("step_count", 0)
+        try:
+            steps = int(steps)
+        except (ValueError, TypeError):
+            return Response({"detail": "Geçersiz değer."}, status=status.HTTP_400_BAD_REQUEST)
+        log, _ = DailyStepLog.objects.get_or_create(patient=request.user, date=today)
+        log.step_count = max(0, steps)
+        log.save(update_fields=["step_count"])
+        return Response({"date": str(today), "step_count": log.step_count})

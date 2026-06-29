@@ -125,6 +125,40 @@ class ExerciseAssignment(models.Model):
         return f"{self.patient.username} — {self.exercise.title}"
 
 
+class DailyWaterLog(models.Model):
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="water_logs",
+    )
+    date = models.DateField()
+    ml_consumed = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = [("patient", "date")]
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.patient.username} — {self.date}: {self.ml_consumed}ml"
+
+
+class DailyStepLog(models.Model):
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="step_logs",
+    )
+    date = models.DateField()
+    step_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = [("patient", "date")]
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.patient.username} — {self.date}: {self.step_count} adım"
+
+
 class ExerciseCompletion(models.Model):
     assignment = models.ForeignKey(
         ExerciseAssignment,

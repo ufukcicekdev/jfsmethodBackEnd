@@ -195,6 +195,34 @@ class WellnessDashboardSerializer(serializers.Serializer):
     stats = serializers.DictField()
 
 
+BADGE_DEFINITIONS = [
+    {"id": "first_exercise", "label": "İlk Adım", "emoji": "🏃", "desc": "İlk egzersizini tamamladın", "type": "total", "threshold": 1},
+    {"id": "total_10", "label": "Azimli", "emoji": "💪", "desc": "10 egzersiz tamamladın", "type": "total", "threshold": 10},
+    {"id": "total_50", "label": "Kararlı", "emoji": "🔥", "desc": "50 egzersiz tamamladın", "type": "total", "threshold": 50},
+    {"id": "streak_3", "label": "3 Gün Serisi", "emoji": "⚡", "desc": "3 gün üst üste egzersiz", "type": "streak", "threshold": 3},
+    {"id": "streak_7", "label": "Haftalık Şampiyon", "emoji": "🏆", "desc": "7 gün üst üste egzersiz", "type": "streak", "threshold": 7},
+    {"id": "streak_30", "label": "Aylık Kahraman", "emoji": "🌟", "desc": "30 gün üst üste egzersiz", "type": "streak", "threshold": 30},
+]
+
+
+def _calc_streak(user):
+    from django.utils import timezone
+    from datetime import timedelta
+
+    today = timezone.localdate()
+    streak = 0
+    day = today
+    while True:
+        has = ExerciseCompletion.objects.filter(
+            patient=user, completed_at__date=day
+        ).exists()
+        if not has:
+            break
+        streak += 1
+        day -= timedelta(days=1)
+    return streak
+
+
 def build_wellness_stats(user):
     from django.db.models import Avg
     from django.utils import timezone
@@ -209,6 +237,16 @@ def build_wellness_stats(user):
     completions_week = ExerciseCompletion.objects.filter(
         patient=user, completed_at__gte=week_ago
     ).count()
+    total_completions = ExerciseCompletion.objects.filter(patient=user).count()
+    streak = _calc_streak(user)
+
+    badges = []
+    for badge in BADGE_DEFINITIONS:
+        if badge["type"] == "total":
+            earned = total_completions >= badge["threshold"]
+        else:
+            earned = streak >= badge["threshold"]
+        badges.append({**badge, "earned": earned})
 
     latest_pain = (
         RegionPainLog.objects.filter(patient=user)
@@ -243,6 +281,9 @@ def build_wellness_stats(user):
     return {
         "active_exercises": active_assignments.count(),
         "completions_this_week": completions_week,
+        "total_completions": total_completions,
+        "exercise_streak": streak,
+        "badges": badges,
         "average_pain": round(latest_avg, 1) if latest_avg is not None else None,
         "pain_change_week": pain_change,
         "weight_change_recent": weight_change,

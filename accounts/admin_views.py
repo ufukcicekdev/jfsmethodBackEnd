@@ -63,7 +63,46 @@ class AdminDashboardView(APIView):
     permission_classes = [IsStaff]
 
     def get(self, request):
+        from datetime import timedelta
+        from django.db.models import Count as DCount
+        from wellness.models import ExerciseCompletion
+
         today = timezone.localdate()
+
+        # Weekly attendance: last 8 weeks, distinct patients who completed at least 1 exercise
+        weekly_attendance = []
+        for i in range(7, -1, -1):
+            week_start = today - timedelta(days=today.weekday() + 7 * i)
+            week_end = week_start + timedelta(days=6)
+            count = (
+                ExerciseCompletion.objects.filter(
+                    completed_at__date__gte=week_start,
+                    completed_at__date__lte=week_end,
+                )
+                .values("patient")
+                .distinct()
+                .count()
+            )
+            weekly_attendance.append({
+                "week_start": str(week_start),
+                "count": count,
+            })
+
+        # Top 5 most completed exercises in last 30 days
+        thirty_days_ago = today - timedelta(days=30)
+        top_exercises = (
+            ExerciseCompletion.objects.filter(
+                completed_at__date__gte=thirty_days_ago,
+            )
+            .values("assignment__exercise__title")
+            .annotate(total=DCount("id"))
+            .order_by("-total")[:5]
+        )
+        top_exercises_data = [
+            {"title": item["assignment__exercise__title"], "count": item["total"]}
+            for item in top_exercises
+        ]
+
         return Response(
             {
                 "patient_count": User.objects.filter(
@@ -81,6 +120,8 @@ class AdminDashboardView(APIView):
                     ],
                 ).count(),
                 "active_packages": SessionPackage.objects.filter(is_active=True).count(),
+                "weekly_attendance": weekly_attendance,
+                "top_exercises": top_exercises_data,
             }
         )
 

@@ -130,6 +130,11 @@ class PatientProfileSerializer(serializers.ModelSerializer):
             "weight",
             "date_of_birth",
             "phone",
+            "target_weight",
+            "target_waist",
+            "target_hip",
+            "target_chest",
+            "target_body_fat",
             "updated_at",
         ]
         read_only_fields = ["updated_at"]

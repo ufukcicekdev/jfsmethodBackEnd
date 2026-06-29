@@ -207,6 +207,11 @@ class PatientProfile(models.Model):
     date_of_birth = models.DateField(null=True, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     admin_notes = models.TextField(blank=True, help_text="Internal therapist notes about this patient")
+    target_weight = models.FloatField(null=True, blank=True, help_text="Hedef kilo (kg)")
+    target_waist = models.FloatField(null=True, blank=True, help_text="Hedef bel (cm)")
+    target_hip = models.FloatField(null=True, blank=True, help_text="Hedef kalça (cm)")
+    target_chest = models.FloatField(null=True, blank=True, help_text="Hedef göğüs (cm)")
+    target_body_fat = models.FloatField(null=True, blank=True, help_text="Hedef yağ oranı (%)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

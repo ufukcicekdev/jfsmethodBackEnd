@@ -8,6 +8,8 @@ from .admin_views import (
 )
 from .views import (
     CompleteExerciseView,
+    DailyStepView,
+    DailyWaterView,
     PainMapView,
     PatientExerciseListView,
     PatientProgressPhotoListView,
@@ -28,6 +30,8 @@ urlpatterns = [
         PatientProgressPhotoListView.as_view(),
         name="wellness-progress-photos",
     ),
+    path("water/", DailyWaterView.as_view(), name="wellness-water"),
+    path("steps/", DailyStepView.as_view(), name="wellness-steps"),
 ]
 
 admin_urlpatterns = [
