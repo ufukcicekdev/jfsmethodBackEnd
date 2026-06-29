@@ -84,7 +84,7 @@ def _send_now(tokens, title, body, data):
                 priority="high",
                 notification=messaging.AndroidNotification(
                     channel_id="default",
-                    notification_priority=messaging.AndroidNotificationPriority.HIGH,
+
                     default_sound=True,
                     default_vibrate_timings=True,
                 ),
