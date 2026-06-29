@@ -42,3 +42,4 @@ htmlcov/
 # Firebase credentials
 firebase-adminsdk*.json
 serviceAccountKey.json
+*firebase*.json

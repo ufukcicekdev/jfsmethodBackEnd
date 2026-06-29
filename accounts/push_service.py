@@ -34,32 +34,29 @@ def _ensure_initialized():
             return _messaging is not None
         _init_done = True
 
-        cred_path = getattr(settings, "FIREBASE_CREDENTIALS_PATH", "") or ""
-        if not cred_path:
-            logger.info("FCM devre dışı: FIREBASE_CREDENTIALS_PATH ayarlı değil.")
-            return False
-
-        import os
-
-        if not os.path.exists(cred_path):
-            logger.warning("FCM devre dışı: kimlik dosyası bulunamadı: %s", cred_path)
-            return False
+        import json, os
 
         try:
             import firebase_admin
             from firebase_admin import credentials, messaging
         except ImportError:
-            logger.warning(
-                "FCM devre dışı: 'firebase-admin' paketi kurulu değil "
-                "(pip install firebase-admin)."
-            )
+            logger.warning("FCM devre dışı: 'firebase-admin' paketi kurulu değil.")
             return False
+
+        # Önce JSON string env var'ına bak, sonra dosya yoluna
+        cred_json = os.environ.get("FIREBASE_CREDENTIALS_JSON", "")
+        cred_path = getattr(settings, "FIREBASE_CREDENTIALS_PATH", "") or ""
 
         try:
             if not firebase_admin._apps:
-                firebase_admin.initialize_app(
-                    credentials.Certificate(cred_path)
-                )
+                if cred_json:
+                    cred_dict = json.loads(cred_json)
+                    firebase_admin.initialize_app(credentials.Certificate(cred_dict))
+                elif cred_path and os.path.exists(cred_path):
+                    firebase_admin.initialize_app(credentials.Certificate(cred_path))
+                else:
+                    logger.info("FCM devre dışı: FIREBASE_CREDENTIALS_JSON veya FIREBASE_CREDENTIALS_PATH ayarlı değil.")
+                    return False
             _messaging = messaging
             logger.info("FCM başlatıldı.")
             return True
