@@ -80,6 +80,21 @@ def _send_now(tokens, title, body, data):
             token=token,
             notification=messaging.Notification(title=title, body=body),
             data=payload_data,
+            android=messaging.AndroidConfig(
+                priority="high",
+                notification=messaging.AndroidNotification(
+                    channel_id="default",
+                    notification_priority=messaging.AndroidNotificationPriority.HIGH,
+                    default_sound=True,
+                    default_vibrate_timings=True,
+                ),
+            ),
+            apns=messaging.APNSConfig(
+                headers={"apns-priority": "10"},
+                payload=messaging.APNSPayload(
+                    aps=messaging.Aps(sound="default"),
+                ),
+            ),
             webpush=messaging.WebpushConfig(
                 notification=messaging.WebpushNotification(
                     title=title,
