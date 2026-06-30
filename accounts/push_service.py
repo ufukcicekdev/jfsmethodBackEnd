@@ -164,7 +164,7 @@ def send_push_to_users(users, *, title, body, data=None):
     thread = threading.Thread(
         target=_send_now,
         args=(tokens, title, body, data),
-        daemon=True,
+        daemon=False,
     )
     thread.start()
 
