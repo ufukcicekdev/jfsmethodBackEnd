@@ -949,11 +949,21 @@ class AdminAttendanceView(APIView):
             return Response({"detail": "Geçersiz durum."}, status=400)
 
         date = request.data.get("date") or timezone.localdate()
+        package_id = request.data.get("package_id")
+
+        session_package = None
+        if package_id:
+            from accounts.models import SessionPackage
+            session_package = SessionPackage.objects.filter(pk=package_id, patient=patient, is_active=True).first()
 
         record, _ = AttendanceRecord.objects.update_or_create(
             patient=patient,
             date=date,
-            defaults={"status": record_status, "marked_by": request.user},
+            defaults={
+                "status": record_status,
+                "marked_by": request.user,
+                "session_package": session_package,
+            },
         )
         return Response({"id": record.id, "status": record.status, "date": str(record.date)})
 

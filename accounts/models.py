@@ -111,11 +111,11 @@ class SessionPackage(models.Model):
 
     @property
     def used_sessions(self):
-        return self._count("completed")
+        return self.attendance_records.filter(status="came").count()
 
     @property
     def no_show_count(self):
-        return self._count("no_show")
+        return self.attendance_records.filter(status="no_show").count()
 
     @property
     def scheduled_count(self):
@@ -125,7 +125,7 @@ class SessionPackage(models.Model):
 
     @property
     def remaining_sessions(self):
-        return self.total_sessions - self.used_sessions
+        return max(0, self.total_sessions - self.used_sessions)
 
 
 class FCMDevice(models.Model):
@@ -581,6 +581,13 @@ class AttendanceRecord(models.Model):
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        related_name="attendance_records",
+    )
+    session_package = models.ForeignKey(
+        "SessionPackage",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="attendance_records",
     )
     date = models.DateField()

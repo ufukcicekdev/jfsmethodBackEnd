@@ -132,6 +132,7 @@ class AdminPatientListSerializer(serializers.ModelSerializer):
     no_show_count = serializers.SerializerMethodField()
     last_attended = serializers.SerializerMethodField()
     today_attendance = serializers.SerializerMethodField()
+    active_packages = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -150,6 +151,7 @@ class AdminPatientListSerializer(serializers.ModelSerializer):
             "no_show_count",
             "last_attended",
             "today_attendance",
+            "active_packages",
         ]
 
     def get_full_name(self, obj):
@@ -193,7 +195,11 @@ class AdminPatientListSerializer(serializers.ModelSerializer):
         rec = AttendanceRecord.objects.filter(patient=obj, date=today).first()
         if not rec:
             return None
-        return {"id": rec.id, "status": rec.status}
+        return {"id": rec.id, "status": rec.status, "package_id": rec.session_package_id}
+
+    def get_active_packages(self, obj):
+        pkgs = SessionPackage.objects.filter(patient=obj, is_active=True)
+        return [{"id": p.id, "name": p.name or f"{p.total_sessions} seanslık paket", "remaining": p.remaining_sessions} for p in pkgs]
 
 
 class AdminPatientDetailSerializer(AdminPatientListSerializer):
@@ -205,6 +211,7 @@ class AdminPatientDetailSerializer(AdminPatientListSerializer):
     progress_photos = serializers.SerializerMethodField()
     packages = serializers.SerializerMethodField()
     attendance = serializers.SerializerMethodField()
+    onboarding_completed = serializers.SerializerMethodField()
 
     class Meta(AdminPatientListSerializer.Meta):
         fields = AdminPatientListSerializer.Meta.fields + [
@@ -216,7 +223,12 @@ class AdminPatientDetailSerializer(AdminPatientListSerializer):
             "progress_photos",
             "packages",
             "attendance",
+            "onboarding_completed",
         ]
+
+    def get_onboarding_completed(self, obj):
+        profile = getattr(obj, "patient_profile", None)
+        return profile.onboarding_completed if profile else False
 
     def get_packages(self, obj):
         packages = SessionPackage.objects.filter(patient=obj).select_related(
