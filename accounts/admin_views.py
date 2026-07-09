@@ -185,6 +185,11 @@ class AdminPatientListView(APIView):
             profile.save(update_fields=["phone", "updated_at"])
 
         patient = patient_queryset().get(pk=user.pk)
+
+        if email and (generated_password or provided_password):
+            from .email_service import send_welcome_email
+            send_welcome_email(user, plain_password=password)
+
         return Response(
             {
                 "patient": AdminPatientDetailSerializer(
@@ -278,6 +283,12 @@ class AdminPatientSetPasswordView(APIView):
 
         patient.set_password(new_password)
         patient.save(update_fields=["password"])
+
+        if patient.email:
+            from .email_service import send_password_changed_by_admin_email
+            admin_name = request.user.get_full_name() or request.user.username
+            send_password_changed_by_admin_email(patient, admin_name=admin_name)
+
         return Response({"detail": "Şifre başarıyla güncellendi."})
 
 

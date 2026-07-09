@@ -168,15 +168,8 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
     "http://localhost:3000,http://127.0.0.1:3000",
 ).split(",")
 
-# Email
-EMAIL_BACKEND = os.environ.get(
-    "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend",
-)
-DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL",
-    "noreply@fizyotech.com",
-)
+# Email — SMTP2GO HTTP API (api key ve from email .env'den okunur)
+DEFAULT_FROM_EMAIL = os.environ.get("SMTP2GO_FROM_EMAIL", os.environ.get("DEFAULT_FROM_EMAIL", "noreply@jfsmethod.com"))
 
 # Firebase Cloud Messaging (push notifications)
 # Service account JSON dosyasının yolu. Firebase Console >

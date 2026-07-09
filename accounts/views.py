@@ -4,7 +4,6 @@ import threading
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import generics, permissions, status
@@ -163,19 +162,8 @@ def _send_password_reset_email(user_id: int, frontend_origin: str):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
         reset_url = f"{frontend_origin.rstrip('/')}/sifre-sifirla?uid={uid}&token={token}"
-        send_mail(
-            subject="FizyoTech — Şifre Sıfırlama",
-            message=(
-                f"Sayın {user.get_full_name() or user.username},\n\n"
-                f"Şifrenizi sıfırlamak için aşağıdaki bağlantıyı kullanın:\n"
-                f"{reset_url}\n\n"
-                f"Bu bağlantı güvenlik nedeniyle sınırlı süre geçerlidir.\n\n"
-                f"FizyoTech Ekibi"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
+        from .email_service import send_password_reset_email
+        send_password_reset_email(user, reset_url)
     except Exception:
         logger.exception("Password reset email failed for user %s", user_id)
 
