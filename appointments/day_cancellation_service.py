@@ -72,7 +72,7 @@ def _send_day_cancellation_email(
             )
         appointments_text = "\n".join(lines)
 
-        subject = f"FizyoTech — {date_label} Tarihli Dersiniz İptal Edildi"
+        subject = f"JFS Method — {date_label} Tarihli Dersiniz İptal Edildi"
         message = (
             f"Sayın {patient.get_full_name() or patient.username},\n\n"
             f"{date_label} tarihinde planlanmış ders/randevunuz iptal edilmiştir.\n\n"
@@ -81,7 +81,7 @@ def _send_day_cancellation_email(
             f"Yeni randevu planlamak için bizimle iletişime geçebilir veya "
             f"platform üzerinden uygun bir saat seçebilirsiniz.\n\n"
             f"Anlayışınız için teşekkür ederiz.\n"
-            f"FizyoTech Ekibi"
+            f"JFS Method Ekibi"
         )
 
         send_mail(

@@ -47,7 +47,7 @@ def _send_postponement_email(appointment_id: int, original_datetime_iso: str):
         if timezone.is_naive(original_dt):
             original_dt = timezone.make_aware(original_dt)
 
-        subject = "FizyoTech — Randevunuz Ertelendi"
+        subject = "JFS Method — Randevunuz Ertelendi"
         message = (
             f"Sayın {patient.get_full_name() or patient.username},\n\n"
             f"Randevunuz ertelenmiştir.\n\n"
@@ -56,7 +56,7 @@ def _send_postponement_email(appointment_id: int, original_datetime_iso: str):
             f"Doktor: {doctor.get_full_name() or doctor.username}\n\n"
             f"Açıklama: {appointment.note}\n\n"
             f"Herhangi bir sorunuz için bizimle iletişime geçebilirsiniz.\n\n"
-            f"FizyoTech Ekibi"
+            f"JFS Method Ekibi"
         )
 
         send_mail(

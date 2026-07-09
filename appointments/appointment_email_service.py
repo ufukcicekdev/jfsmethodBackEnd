@@ -47,7 +47,7 @@ def send_appointment_created_email(appointment_id: int):
         doctor_name = appointment.doctor.get_full_name() or appointment.doctor.username
         dt_label = _format_datetime(appointment.appointment_datetime)
 
-        subject = "FizyoTech — Randevu Talebiniz Alındı"
+        subject = "JFS Method — Randevu Talebiniz Alındı"
         message = (
             f"Sayın {patient.get_full_name() or patient.username},\n\n"
             f"Randevu talebiniz başarıyla alınmıştır.\n\n"
@@ -56,7 +56,7 @@ def send_appointment_created_email(appointment_id: int):
             f"Durum: Onay bekliyor\n\n"
             f"Klinik tarafından onaylandığında ayrıca bilgilendirileceksiniz.\n"
             f"Randevularınızı web sitesindeki «Randevularım» bölümünden takip edebilirsiniz.\n\n"
-            f"FizyoTech Ekibi"
+            f"JFS Method Ekibi"
         )
         _send_email(subject, message, patient.email)
     except Appointment.DoesNotExist:
@@ -79,7 +79,7 @@ def send_appointment_approved_email(appointment_id: int):
         doctor_name = appointment.doctor.get_full_name() or appointment.doctor.username
         dt_label = _format_datetime(appointment.appointment_datetime)
 
-        subject = "FizyoTech — Randevunuz Onaylandı"
+        subject = "JFS Method — Randevunuz Onaylandı"
         message = (
             f"Sayın {patient.get_full_name() or patient.username},\n\n"
             f"Randevunuz onaylanmıştır.\n\n"
@@ -87,7 +87,7 @@ def send_appointment_approved_email(appointment_id: int):
             f"Doktor: Dr. {doctor_name}\n\n"
             f"Lütfen randevu saatinde kliniğimize gelmeyi unutmayın.\n"
             f"Değişiklik veya iptal için web sitesinden «Randevularım» bölümünü kullanabilirsiniz.\n\n"
-            f"FizyoTech Ekibi"
+            f"JFS Method Ekibi"
         )
         _send_email(subject, message, patient.email)
     except Appointment.DoesNotExist:

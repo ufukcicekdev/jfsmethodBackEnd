@@ -312,7 +312,7 @@ class SiteSettings(models.Model):
     """Tekil site/iletişim ayarları (adres, telefon, sosyal medya, analytics)."""
 
     # İletişim
-    clinic_name = models.CharField(max_length=120, default="FizyoTech")
+    clinic_name = models.CharField(max_length=120, default="JFS Method")
     address = models.TextField(blank=True)
     phone = models.CharField(max_length=40, blank=True)
     whatsapp = models.CharField(max_length=40, blank=True)
