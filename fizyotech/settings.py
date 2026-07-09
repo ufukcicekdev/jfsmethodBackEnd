@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "appointments",
     "kvkk",
     "wellness",
+    "blog",
 ]
 
 # KVKK / Security — enforce HTTPS in production

@@ -116,6 +116,8 @@ urlpatterns = [
     path("api/appointments/", include("appointments.urls")),
     path("api/wellness/", include("wellness.urls")),
     path("api/kvkk/", include("kvkk.urls")),
+    path("api/blog/", include("blog.public_urls")),
+    path("api/admin/blog/", include("blog.admin_urls")),
 ]
 
 if settings.DEBUG:
