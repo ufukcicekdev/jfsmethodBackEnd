@@ -35,6 +35,7 @@ from .admin_views import (
     AdminPatientPhotoListCreateView,
     AdminPatientPostureDeleteView,
     AdminPatientPostureListCreateView,
+    AdminPatientSetPasswordView,
     AdminPatientWeightView,
 )
 
@@ -67,6 +68,11 @@ urlpatterns = [
         "patients/<int:pk>/",
         AdminPatientDetailView.as_view(),
         name="admin-patient-detail",
+    ),
+    path(
+        "patients/<int:pk>/set-password/",
+        AdminPatientSetPasswordView.as_view(),
+        name="admin-patient-set-password",
     ),
     path(
         "patients/<int:pk>/weight/",

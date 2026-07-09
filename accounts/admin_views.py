@@ -263,6 +263,24 @@ class AdminPatientDetailView(APIView):
         )
 
 
+class AdminPatientSetPasswordView(APIView):
+    permission_classes = [IsStaff]
+
+    def post(self, request, pk):
+        try:
+            patient = patient_queryset().get(pk=pk)
+        except User.DoesNotExist:
+            return Response({"detail": "Öğrenci bulunamadı."}, status=404)
+
+        new_password = request.data.get("new_password", "").strip()
+        if len(new_password) < 6:
+            return Response({"detail": "Şifre en az 6 karakter olmalıdır."}, status=400)
+
+        patient.set_password(new_password)
+        patient.save(update_fields=["password"])
+        return Response({"detail": "Şifre başarıyla güncellendi."})
+
+
 class AdminPatientWeightView(APIView):
     permission_classes = [IsStaff]
 
