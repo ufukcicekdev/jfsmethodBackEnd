@@ -6,9 +6,13 @@ from appointments.models import Appointment
 from .models import (
     AttendanceRecord,
     BodyMeasurement,
+    DietDay,
     DietItem,
+    DietMeal,
+    DietMealItem,
     DietPlan,
     DietPlanItem,
+    DietProgram,
     Faq,
     OnboardingAnswer,
     OnboardingQuestion,
@@ -542,6 +546,87 @@ class DietPlanSerializer(serializers.ModelSerializer):
 
     def get_meal_type_label(self, obj):
         return dict(DietPlan.MEAL_CHOICES).get(obj.meal_type, obj.meal_type)
+
+
+class DietMealItemSerializer(serializers.ModelSerializer):
+    diet_item_id = serializers.PrimaryKeyRelatedField(
+        queryset=DietItem.objects.all(), source="diet_item", write_only=True, allow_null=True, required=False
+    )
+
+    class Meta:
+        model = DietMealItem
+        fields = ["id", "diet_item_id", "name", "quantity", "calories", "note"]
+
+
+class DietMealSerializer(serializers.ModelSerializer):
+    items = DietMealItemSerializer(many=True, required=False)
+    total_calories = serializers.IntegerField(read_only=True)
+    meal_type_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DietMeal
+        fields = ["id", "meal_type", "meal_type_label", "meal_time", "description", "order", "items", "total_calories"]
+
+    def get_meal_type_label(self, obj):
+        return dict(DietMeal.MEAL_CHOICES).get(obj.meal_type, obj.meal_type)
+
+
+class DietDaySerializer(serializers.ModelSerializer):
+    meals = DietMealSerializer(many=True, required=False)
+
+    class Meta:
+        model = DietDay
+        fields = ["id", "day_number", "label", "description", "meals"]
+
+
+class DietProgramSerializer(serializers.ModelSerializer):
+    days = DietDaySerializer(many=True, required=False)
+    assigned_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DietProgram
+        fields = [
+            "id", "title", "goals", "feeding_notes", "duration_days",
+            "is_active", "created_at", "assigned_by_name", "days",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+    def get_assigned_by_name(self, obj):
+        if not obj.assigned_by:
+            return None
+        return obj.assigned_by.get_full_name() or obj.assigned_by.username
+
+    def create(self, validated_data):
+        days_data = validated_data.pop("days", [])
+        program = DietProgram.objects.create(**validated_data)
+        self._save_days(program, days_data)
+        return program
+
+    def update(self, instance, validated_data):
+        days_data = validated_data.pop("days", None)
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save()
+        if days_data is not None:
+            instance.days.all().delete()
+            self._save_days(instance, days_data)
+        return instance
+
+    def _save_days(self, program, days_data):
+        from .models import DietDay, DietMeal, DietMealItem
+        for day_data in days_data:
+            meals_data = day_data.pop("meals", [])
+            day = DietDay.objects.create(program=program, **day_data)
+            for order, meal_data in enumerate(meals_data):
+                items_data = meal_data.pop("items", [])
+                meal = DietMeal.objects.create(day=day, order=order, **meal_data)
+                for item_data in items_data:
+                    diet_item = item_data.pop("diet_item", None)
+                    if diet_item and not item_data.get("name"):
+                        item_data["name"] = diet_item.name
+                    if diet_item and not item_data.get("calories"):
+                        item_data["calories"] = int(diet_item.calories * float(item_data.get("quantity", 1)))
+                    DietMealItem.objects.create(meal=meal, diet_item=diet_item, **item_data)
 
 
 class OnboardingQuestionSerializer(serializers.ModelSerializer):

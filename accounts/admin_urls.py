@@ -1,6 +1,8 @@
 from django.urls import path
 
 from .admin_views import (
+    AdminDietProgramDetailView,
+    AdminDietProgramListView,
     AdminSendNotificationView,
     AdminAppointmentListView,
     AdminAppointmentStatusView,
@@ -201,6 +203,8 @@ urlpatterns = [
     path("diet-items/<int:pk>/", AdminDietItemDetailView.as_view(), name="admin-diet-item-detail"),
     path("patients/<int:patient_id>/diets/", AdminPatientDietPlanListView.as_view(), name="admin-patient-diets"),
     path("patients/<int:patient_id>/diets/<int:plan_id>/", AdminPatientDietPlanDetailView.as_view(), name="admin-patient-diet-detail"),
+    path("patients/<int:patient_id>/diet-programs/", AdminDietProgramListView.as_view(), name="admin-patient-diet-programs"),
+    path("patients/<int:patient_id>/diet-programs/<int:program_id>/", AdminDietProgramDetailView.as_view(), name="admin-patient-diet-program-detail"),
     path("patients/<int:patient_id>/attendance/", AdminAttendanceView.as_view(), name="admin-patient-attendance"),
     path("testimonials/", AdminTestimonialListView.as_view(), name="admin-testimonials"),
     path("testimonials/<int:pk>/", AdminTestimonialDetailView.as_view(), name="admin-testimonial-detail"),

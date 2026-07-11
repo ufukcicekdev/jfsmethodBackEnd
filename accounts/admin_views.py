@@ -20,6 +20,7 @@ from .admin_serializers import (
     BodyMeasurementSerializer,
     DietItemSerializer,
     DietPlanSerializer,
+    DietProgramSerializer,
     FaqSerializer,
     OnboardingAnswerSerializer,
     OnboardingQuestionSerializer,
@@ -38,6 +39,7 @@ from .models import (
     DietItem,
     DietPlan,
     DietPlanItem,
+    DietProgram,
     Faq,
     OnboardingAnswer,
     OnboardingQuestion,
@@ -1196,3 +1198,59 @@ class AdminPatientOnboardingAnswersView(APIView):
             return Response({"detail": "Öğrenci bulunamadı."}, status=404)
         answers = OnboardingAnswer.objects.filter(user=patient).select_related("question")
         return Response(OnboardingAnswerSerializer(answers, many=True).data)
+
+
+class AdminDietProgramListView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request, patient_id):
+        programs = (
+            DietProgram.objects
+            .filter(patient_id=patient_id)
+            .prefetch_related("days__meals__items__diet_item")
+        )
+        return Response(DietProgramSerializer(programs, many=True).data)
+
+    def post(self, request, patient_id):
+        try:
+            patient = User.objects.get(pk=patient_id, is_staff=False, is_superuser=False)
+        except User.DoesNotExist:
+            return Response({"detail": "Öğrenci bulunamadı."}, status=404)
+        serializer = DietProgramSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(patient=patient, assigned_by=request.user)
+        return Response(serializer.data, status=201)
+
+
+class AdminDietProgramDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, patient_id, program_id):
+        try:
+            return DietProgram.objects.prefetch_related("days__meals__items__diet_item").get(
+                pk=program_id, patient_id=patient_id
+            )
+        except DietProgram.DoesNotExist:
+            return None
+
+    def get(self, request, patient_id, program_id):
+        obj = self._get(patient_id, program_id)
+        if not obj:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        return Response(DietProgramSerializer(obj).data)
+
+    def patch(self, request, patient_id, program_id):
+        obj = self._get(patient_id, program_id)
+        if not obj:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        serializer = DietProgramSerializer(obj, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, patient_id, program_id):
+        obj = self._get(patient_id, program_id)
+        if not obj:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        obj.delete()
+        return Response(status=204)

@@ -574,6 +574,92 @@ class DietPlanItem(models.Model):
         verbose_name_plural = "Plan Besinleri"
 
 
+class DietProgram(models.Model):
+    """Bir öğrenciye atanan çok günlük beslenme programı."""
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="diet_programs"
+    )
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="assigned_diet_programs"
+    )
+    title = models.CharField(max_length=200)
+    goals = models.TextField(blank=True, help_text="Hedefler (her satır bir madde)")
+    feeding_notes = models.CharField(max_length=300, blank=True, help_text="örn: 20.00 sonrası sadece su")
+    duration_days = models.PositiveSmallIntegerField(default=7)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Beslenme Programı"
+        verbose_name_plural = "Beslenme Programları"
+
+    def __str__(self):
+        return f"{self.patient.get_full_name()} — {self.title}"
+
+
+class DietDay(models.Model):
+    """Program içindeki tek bir gün."""
+    program = models.ForeignKey(DietProgram, on_delete=models.CASCADE, related_name="days")
+    day_number = models.PositiveSmallIntegerField()
+    label = models.CharField(max_length=50, blank=True, help_text="örn: Pazartesi, Gün 1")
+    description = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["day_number"]
+        unique_together = [("program", "day_number")]
+        verbose_name = "Diyet Günü"
+        verbose_name_plural = "Diyet Günleri"
+
+    def __str__(self):
+        return f"{self.program.title} — Gün {self.day_number}"
+
+
+class DietMeal(models.Model):
+    """Bir günün içindeki öğün."""
+    MEAL_CHOICES = [
+        ("sabah",  "Kahvaltı"),
+        ("ara1",   "Ara Öğün 1"),
+        ("ogle",   "Öğle"),
+        ("ara2",   "Ara Öğün 2"),
+        ("aksam",  "Akşam"),
+        ("gece",   "Gece"),
+        ("serbest","Serbest Öğün"),
+    ]
+    day = models.ForeignKey(DietDay, on_delete=models.CASCADE, related_name="meals")
+    meal_type = models.CharField(max_length=10, choices=MEAL_CHOICES, default="ogle")
+    meal_time = models.CharField(max_length=10, blank=True, help_text="örn: 12:00")
+    description = models.CharField(max_length=300, blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "meal_type"]
+        verbose_name = "Öğün"
+        verbose_name_plural = "Öğünler"
+
+    @property
+    def total_calories(self):
+        return sum(i.calories for i in self.items.all())
+
+
+class DietMealItem(models.Model):
+    """Öğün içindeki besin — kütüphaneden veya serbest metin."""
+    meal = models.ForeignKey(DietMeal, on_delete=models.CASCADE, related_name="items")
+    diet_item = models.ForeignKey(DietItem, on_delete=models.SET_NULL, null=True, blank=True)
+    name = models.CharField(max_length=200)
+    quantity = models.DecimalField(max_digits=5, decimal_places=2, default=1)
+    calories = models.PositiveIntegerField(default=0)
+    note = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "Öğün Besini"
+        verbose_name_plural = "Öğün Besinleri"
+
+    def __str__(self):
+        return self.name
+
+
 class AttendanceRecord(models.Model):
     """Randevudan bağımsız günlük katılım kaydı."""
     STATUS_CHOICES = [("came", "Geldi"), ("no_show", "Gelmedi")]
