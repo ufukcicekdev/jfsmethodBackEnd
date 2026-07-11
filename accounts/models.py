@@ -575,12 +575,9 @@ class DietPlanItem(models.Model):
 
 
 class DietProgram(models.Model):
-    """Bir öğrenciye atanan çok günlük beslenme programı."""
-    patient = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="diet_programs"
-    )
-    assigned_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="assigned_diet_programs"
+    """Yeniden kullanılabilir global beslenme programı şablonu."""
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="created_diet_programs"
     )
     title = models.CharField(max_length=200)
     goals = models.TextField(blank=True, help_text="Hedefler (her satır bir madde)")
@@ -595,7 +592,30 @@ class DietProgram(models.Model):
         verbose_name_plural = "Beslenme Programları"
 
     def __str__(self):
-        return f"{self.patient.get_full_name()} — {self.title}"
+        return self.title
+
+
+class PatientDietAssignment(models.Model):
+    """Bir öğrenciye atanan beslenme programı."""
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="diet_assignments"
+    )
+    program = models.ForeignKey(DietProgram, on_delete=models.CASCADE, related_name="assignments")
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="made_diet_assignments"
+    )
+    is_active = models.BooleanField(default=True)
+    note = models.CharField(max_length=300, blank=True)
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-assigned_at"]
+        unique_together = [("patient", "program")]
+        verbose_name = "Öğrenci Beslenme Ataması"
+        verbose_name_plural = "Öğrenci Beslenme Atamaları"
+
+    def __str__(self):
+        return f"{self.patient.get_full_name()} — {self.program.title}"
 
 
 class DietDay(models.Model):

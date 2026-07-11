@@ -13,6 +13,7 @@ from .models import (
     DietPlan,
     DietPlanItem,
     DietProgram,
+    PatientDietAssignment,
     Faq,
     OnboardingAnswer,
     OnboardingQuestion,
@@ -581,20 +582,24 @@ class DietDaySerializer(serializers.ModelSerializer):
 
 class DietProgramSerializer(serializers.ModelSerializer):
     days = DietDaySerializer(many=True, required=False)
-    assigned_by_name = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
+    assignment_count = serializers.SerializerMethodField()
 
     class Meta:
         model = DietProgram
         fields = [
             "id", "title", "goals", "feeding_notes", "duration_days",
-            "is_active", "created_at", "assigned_by_name", "days",
+            "is_active", "created_at", "created_by_name", "assignment_count", "days",
         ]
         read_only_fields = ["id", "created_at"]
 
-    def get_assigned_by_name(self, obj):
-        if not obj.assigned_by:
+    def get_created_by_name(self, obj):
+        if not obj.created_by:
             return None
-        return obj.assigned_by.get_full_name() or obj.assigned_by.username
+        return obj.created_by.get_full_name() or obj.created_by.username
+
+    def get_assignment_count(self, obj):
+        return obj.assignments.count()
 
     def create(self, validated_data):
         days_data = validated_data.pop("days", [])
@@ -627,6 +632,24 @@ class DietProgramSerializer(serializers.ModelSerializer):
                     if diet_item and not item_data.get("calories"):
                         item_data["calories"] = int(diet_item.calories * float(item_data.get("quantity", 1)))
                     DietMealItem.objects.create(meal=meal, diet_item=diet_item, **item_data)
+
+
+class PatientDietAssignmentSerializer(serializers.ModelSerializer):
+    program = DietProgramSerializer(read_only=True)
+    program_id = serializers.PrimaryKeyRelatedField(
+        queryset=DietProgram.objects.all(), source="program", write_only=True
+    )
+    assigned_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PatientDietAssignment
+        fields = ["id", "program", "program_id", "is_active", "note", "assigned_at", "assigned_by_name"]
+        read_only_fields = ["id", "assigned_at"]
+
+    def get_assigned_by_name(self, obj):
+        if not obj.assigned_by:
+            return None
+        return obj.assigned_by.get_full_name() or obj.assigned_by.username
 
 
 class OnboardingQuestionSerializer(serializers.ModelSerializer):

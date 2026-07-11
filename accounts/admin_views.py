@@ -21,6 +21,7 @@ from .admin_serializers import (
     DietItemSerializer,
     DietPlanSerializer,
     DietProgramSerializer,
+    PatientDietAssignmentSerializer,
     FaqSerializer,
     OnboardingAnswerSerializer,
     OnboardingQuestionSerializer,
@@ -40,6 +41,7 @@ from .models import (
     DietPlan,
     DietPlanItem,
     DietProgram,
+    PatientDietAssignment,
     Faq,
     OnboardingAnswer,
     OnboardingQuestion,
@@ -1201,46 +1203,38 @@ class AdminPatientOnboardingAnswersView(APIView):
 
 
 class AdminDietProgramListView(APIView):
+    """Global program listesi ve oluşturma."""
     permission_classes = [IsStaff]
 
-    def get(self, request, patient_id):
-        programs = (
-            DietProgram.objects
-            .filter(patient_id=patient_id)
-            .prefetch_related("days__meals__items__diet_item")
-        )
+    def get(self, request):
+        programs = DietProgram.objects.prefetch_related("days__meals__items__diet_item", "assignments")
         return Response(DietProgramSerializer(programs, many=True).data)
 
-    def post(self, request, patient_id):
-        try:
-            patient = User.objects.get(pk=patient_id, is_staff=False, is_superuser=False)
-        except User.DoesNotExist:
-            return Response({"detail": "Öğrenci bulunamadı."}, status=404)
+    def post(self, request):
         serializer = DietProgramSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(patient=patient, assigned_by=request.user)
+        serializer.save(created_by=request.user)
         return Response(serializer.data, status=201)
 
 
 class AdminDietProgramDetailView(APIView):
+    """Global program detay, güncelleme, silme."""
     permission_classes = [IsStaff]
 
-    def _get(self, patient_id, program_id):
+    def _get(self, program_id):
         try:
-            return DietProgram.objects.prefetch_related("days__meals__items__diet_item").get(
-                pk=program_id, patient_id=patient_id
-            )
+            return DietProgram.objects.prefetch_related("days__meals__items__diet_item", "assignments").get(pk=program_id)
         except DietProgram.DoesNotExist:
             return None
 
-    def get(self, request, patient_id, program_id):
-        obj = self._get(patient_id, program_id)
+    def get(self, request, program_id):
+        obj = self._get(program_id)
         if not obj:
             return Response({"detail": "Bulunamadı."}, status=404)
         return Response(DietProgramSerializer(obj).data)
 
-    def patch(self, request, patient_id, program_id):
-        obj = self._get(patient_id, program_id)
+    def patch(self, request, program_id):
+        obj = self._get(program_id)
         if not obj:
             return Response({"detail": "Bulunamadı."}, status=404)
         serializer = DietProgramSerializer(obj, data=request.data, partial=True)
@@ -1248,8 +1242,62 @@ class AdminDietProgramDetailView(APIView):
         serializer.save()
         return Response(serializer.data)
 
-    def delete(self, request, patient_id, program_id):
-        obj = self._get(patient_id, program_id)
+    def delete(self, request, program_id):
+        obj = self._get(program_id)
+        if not obj:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        obj.delete()
+        return Response(status=204)
+
+
+class AdminPatientDietAssignmentListView(APIView):
+    """Öğrenciye atanmış programları listele ve yeni ata."""
+    permission_classes = [IsStaff]
+
+    def get(self, request, patient_id):
+        assignments = (
+            PatientDietAssignment.objects
+            .filter(patient_id=patient_id)
+            .select_related("program", "assigned_by")
+            .prefetch_related("program__days__meals__items__diet_item")
+        )
+        return Response(PatientDietAssignmentSerializer(assignments, many=True).data)
+
+    def post(self, request, patient_id):
+        try:
+            patient = User.objects.get(pk=patient_id, is_staff=False, is_superuser=False)
+        except User.DoesNotExist:
+            return Response({"detail": "Öğrenci bulunamadı."}, status=404)
+        serializer = PatientDietAssignmentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(patient=patient, assigned_by=request.user)
+        return Response(serializer.data, status=201)
+
+
+class AdminPatientDietAssignmentDetailView(APIView):
+    """Atama güncelle (aktif/pasif, not) veya sil."""
+    permission_classes = [IsStaff]
+
+    def _get(self, patient_id, assignment_id):
+        try:
+            return PatientDietAssignment.objects.select_related("program", "assigned_by").prefetch_related(
+                "program__days__meals__items__diet_item"
+            ).get(pk=assignment_id, patient_id=patient_id)
+        except PatientDietAssignment.DoesNotExist:
+            return None
+
+    def patch(self, request, patient_id, assignment_id):
+        obj = self._get(patient_id, assignment_id)
+        if not obj:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        for field in ("is_active", "note"):
+            if field in request.data:
+                setattr(obj, field, request.data[field])
+        obj.save()
+        return Response(PatientDietAssignmentSerializer(obj).data)
+
+    def delete(self, request, patient_id, assignment_id):
+        obj = self._get(patient_id, assignment_id)
         if not obj:
             return Response({"detail": "Bulunamadı."}, status=404)
         obj.delete()
