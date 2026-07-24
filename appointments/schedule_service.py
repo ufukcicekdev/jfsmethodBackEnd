@@ -8,12 +8,29 @@ from .models import (
     AppointmentStatus,
     ClinicHoliday,
     ClinicScheduleSettings,
+    SlotBlock,
     WorkingDay,
 )
 
 
 def is_holiday(target_date) -> bool:
     return ClinicHoliday.objects.filter(date=target_date).exists()
+
+
+def get_blocked_ranges(target_date):
+    """O güne ait SlotBlock kayıtlarını (start_time, end_time) tuple listesi olarak döner."""
+    return list(
+        SlotBlock.objects.filter(date=target_date).values_list(
+            "start_time", "end_time"
+        )
+    )
+
+
+def is_slot_blocked(slot_time, blocked_ranges) -> bool:
+    for start, end in blocked_ranges:
+        if start <= slot_time < end:
+            return True
+    return False
 
 
 def get_working_day(weekday: int) -> WorkingDay | None:
@@ -65,12 +82,16 @@ def get_available_slots(target_date):
 
     counts = get_booked_counts(target_date)
     capacity = ClinicScheduleSettings.get_solo().slot_capacity or 1
+    blocked_ranges = get_blocked_ranges(target_date)
     now = timezone.now()
     slots = []
 
     for doctor in doctors:
         for slot_dt in slot_starts:
             if slot_dt <= now:
+                continue
+            slot_time = timezone.localtime(slot_dt).time()
+            if is_slot_blocked(slot_time, blocked_ranges):
                 continue
             booked = counts.get((doctor.id, slot_dt), 0)
             if booked >= capacity:
@@ -119,6 +140,10 @@ def is_valid_appointment_slot(
         current += duration
 
     if slot_time not in valid_starts:
+        return False
+
+    blocked_ranges = get_blocked_ranges(target_date)
+    if is_slot_blocked(slot_time, blocked_ranges):
         return False
 
     booked_query = Appointment.objects.filter(

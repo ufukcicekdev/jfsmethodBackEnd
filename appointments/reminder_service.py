@@ -97,3 +97,43 @@ def send_due_reminders():
         )
 
     return {"sent_24h": sent_24h, "sent_1h": sent_1h}
+
+
+def send_eod_attendance_reminders():
+    """Gün sonunda katılım işaretlenmemiş randevular için admine push gönderir.
+
+    Bugünkü 'approved' veya 'pending' randevulardan saati geçmiş olanları bulur.
+    Admin henüz 'completed' veya 'no_show' yapmamışsa bildirim gönderir.
+    """
+    from accounts.push_service import send_push_to_staff
+
+    now = timezone.now()
+    today = timezone.localdate()
+
+    unmarked = (
+        Appointment.objects.filter(
+            status__in=ACTIVE_STATUSES,
+            appointment_datetime__date=today,
+            appointment_datetime__lt=now,
+        )
+        .select_related("patient", "doctor")
+    )
+
+    count = unmarked.count()
+    if count == 0:
+        return {"notified": 0}
+
+    patient_names = ", ".join(
+        a.patient.get_full_name() or a.patient.username
+        for a in unmarked[:5]
+    )
+    suffix = f" ve {count - 5} diğeri" if count > 5 else ""
+
+    send_push_to_staff(
+        title=f"Bugün {count} randevunun katılımı işaretlenmedi",
+        body=f"{patient_names}{suffix} — Geldi/Gelmedi olarak işaretleyin.",
+        data={"link": "/panel/randevular?status=approved"},
+    )
+
+    logger.info("Gün sonu katılım hatırlatması gönderildi: %s randevu", count)
+    return {"notified": count}

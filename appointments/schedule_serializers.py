@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import ClinicHoliday, ClinicScheduleSettings, WorkingDay
+from .models import ClinicHoliday, ClinicScheduleSettings, SlotBlock, WorkingDay
 
 
 class WorkingDaySerializer(serializers.ModelSerializer):
@@ -47,6 +47,20 @@ class WorkingDayUpdateSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["is_working"] and attrs["start_time"] >= attrs["end_time"]:
+            raise serializers.ValidationError(
+                "Bitiş saati başlangıç saatinden sonra olmalıdır."
+            )
+        return attrs
+
+
+class SlotBlockSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SlotBlock
+        fields = ["id", "date", "start_time", "end_time", "reason", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+    def validate(self, attrs):
+        if attrs["start_time"] >= attrs["end_time"]:
             raise serializers.ValidationError(
                 "Bitiş saati başlangıç saatinden sonra olmalıdır."
             )

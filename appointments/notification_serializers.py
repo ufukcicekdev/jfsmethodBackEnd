@@ -18,6 +18,7 @@ class AdminNotificationSerializer(serializers.ModelSerializer):
             "message",
             "link",
             "actor_name",
+            "appointment_id",
             "is_read",
             "created_at",
         ]

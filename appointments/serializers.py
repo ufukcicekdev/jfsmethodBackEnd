@@ -79,6 +79,36 @@ class AppointmentSerializer(serializers.ModelSerializer):
                     }
                 )
 
+            request = self.context.get("request")
+            if request and request.user.is_authenticated and not request.user.is_staff:
+                active_package = (
+                    request.user.session_packages.filter(is_active=True)
+                    .order_by("-purchased_at", "-created_at")
+                    .first()
+                )
+                if active_package is None:
+                    raise serializers.ValidationError(
+                        {
+                            "non_field_errors": (
+                                "Randevu alabilmek için aktif bir paketinizin olması gerekmektedir. "
+                                "Lütfen bir paket satın alın veya yöneticinizle iletişime geçin."
+                            )
+                        }
+                    )
+                available = (
+                    active_package.remaining_sessions
+                    - active_package.scheduled_count
+                )
+                if available <= 0:
+                    raise serializers.ValidationError(
+                        {
+                            "non_field_errors": (
+                                "Paketinizdeki tüm seanslar kullanılmış veya planlanmış durumda. "
+                                "Yeni randevu alabilmek için yeni bir paket almanız gerekmektedir."
+                            )
+                        }
+                    )
+
             appointment_datetime = attrs.get("appointment_datetime")
             doctor = attrs.get("doctor")
             if appointment_datetime and doctor:

@@ -49,6 +49,8 @@ from appointments.schedule_views import (
     AdminHolidayDeleteView,
     AdminHolidayListCreateView,
     AdminScheduleView,
+    AdminSlotBlockDeleteView,
+    AdminSlotBlockListCreateView,
 )
 
 from appointments.notification_views import (
@@ -153,6 +155,16 @@ urlpatterns = [
         "schedule/cancel-day/",
         AdminCancelDayView.as_view(),
         name="admin-cancel-day",
+    ),
+    path(
+        "schedule/slot-blocks/",
+        AdminSlotBlockListCreateView.as_view(),
+        name="admin-slot-blocks",
+    ),
+    path(
+        "schedule/slot-blocks/<int:pk>/",
+        AdminSlotBlockDeleteView.as_view(),
+        name="admin-slot-block-delete",
     ),
     path(
         "notifications/send/",

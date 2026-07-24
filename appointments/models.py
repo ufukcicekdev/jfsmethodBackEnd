@@ -131,6 +131,24 @@ class ClinicHoliday(models.Model):
         return f"{label} — {self.date:%Y-%m-%d}"
 
 
+class SlotBlock(models.Model):
+    """Belirli bir tarih + saat aralığını randevuya kapatır."""
+
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    reason = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Slot Block"
+        verbose_name_plural = "Slot Blocks"
+        ordering = ["date", "start_time"]
+
+    def __str__(self):
+        return f"{self.date:%Y-%m-%d} {self.start_time:%H:%M}–{self.end_time:%H:%M}"
+
+
 class Appointment(models.Model):
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,

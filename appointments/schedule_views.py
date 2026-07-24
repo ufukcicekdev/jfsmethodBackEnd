@@ -6,13 +6,14 @@ from accounts.permissions import IsStaff
 
 from django.utils import timezone
 
-from .models import ClinicHoliday, ClinicScheduleSettings, WorkingDay
+from .models import ClinicHoliday, ClinicScheduleSettings, SlotBlock, WorkingDay
 from .day_cancellation_service import cancel_day, get_day_cancellation_preview
 from .schedule_serializers import (
     ClinicHolidaySerializer,
     ClinicScheduleUpdateSerializer,
     DayCancellationPreviewSerializer,
     DayCancellationSerializer,
+    SlotBlockSerializer,
     WorkingDaySerializer,
 )
 from .schedule_service import ensure_default_schedule
@@ -154,3 +155,30 @@ class AdminCancelDayView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class AdminSlotBlockListCreateView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        from django.utils import timezone as tz
+        blocks = SlotBlock.objects.filter(date__gte=tz.localdate())
+        return Response(SlotBlockSerializer(blocks, many=True).data)
+
+    def post(self, request):
+        serializer = SlotBlockSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        block = serializer.save()
+        return Response(SlotBlockSerializer(block).data, status=status.HTTP_201_CREATED)
+
+
+class AdminSlotBlockDeleteView(APIView):
+    permission_classes = [IsStaff]
+
+    def delete(self, request, pk):
+        try:
+            block = SlotBlock.objects.get(pk=pk)
+        except SlotBlock.DoesNotExist:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        block.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

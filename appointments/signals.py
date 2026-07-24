@@ -147,6 +147,43 @@ def _push_patient_status_change(instance, new_status):
 
 
 @receiver(post_save, sender=Appointment)
+def sync_attendance_record(sender, instance, created, **kwargs):
+    """Randevu 'completed' veya 'no_show' olduğunda AttendanceRecord'u oluşturur/günceller."""
+    if created:
+        return
+
+    original_status = getattr(instance, "_original_status", None)
+    if original_status == instance.status:
+        return
+
+    from appointments.models import AppointmentStatus
+    from accounts.models import AttendanceRecord
+
+    if instance.status not in (AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW):
+        return
+
+    attendance_status = "came" if instance.status == AppointmentStatus.COMPLETED else "no_show"
+    date = instance.appointment_datetime.date()
+    actor = getattr(instance, "_notification_actor", None)
+
+    record, created_rec = AttendanceRecord.objects.get_or_create(
+        patient=instance.patient,
+        date=date,
+        defaults={
+            "session_package": instance.package,
+            "status": attendance_status,
+            "marked_by": actor,
+        },
+    )
+    if not created_rec and record.status != attendance_status:
+        record.status = attendance_status
+        record.marked_by = actor
+        if instance.package:
+            record.session_package = instance.package
+        record.save(update_fields=["status", "marked_by", "session_package", "updated_at"])
+
+
+@receiver(post_save, sender=Appointment)
 def handle_appointment_notifications(sender, instance, created, **kwargs):
     from accounts.push_service import send_push_to_staff
 

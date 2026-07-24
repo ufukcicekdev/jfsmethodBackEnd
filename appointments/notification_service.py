@@ -106,3 +106,10 @@ def notify_patient_registered(user):
         message=f"{name} ({user.email}) platforma kayıt oldu.",
         actor=user,
     )
+    from accounts.push_service import send_push_to_staff
+
+    send_push_to_staff(
+        title="Yeni öğrenci kaydı",
+        body=f"{name} ({user.email}) platforma kayıt oldu.",
+        data={"link": f"/panel/ogrenciler", "notification_type": "patient_registered"},
+    )
