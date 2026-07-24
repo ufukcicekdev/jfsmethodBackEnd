@@ -70,6 +70,9 @@ class SlotBlockSerializer(serializers.ModelSerializer):
 class ClinicScheduleUpdateSerializer(serializers.Serializer):
     slot_duration_minutes = serializers.IntegerField(min_value=15, max_value=120)
     slot_capacity = serializers.IntegerField(min_value=1, max_value=100, required=False)
+    slot_break_minutes = serializers.IntegerField(min_value=0, max_value=120, required=False)
+    free_cancel_hours = serializers.IntegerField(min_value=0, max_value=72, required=False)
+    late_cancel_penalty_minutes = serializers.IntegerField(min_value=0, max_value=1440, required=False)
     working_days = WorkingDayUpdateSerializer(many=True)
 
     def validate_working_days(self, value):

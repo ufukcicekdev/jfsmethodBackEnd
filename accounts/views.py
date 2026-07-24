@@ -93,6 +93,25 @@ class MyPackagesView(APIView):
         return Response(SessionPackageSerializer(packages, many=True).data)
 
 
+class MyPenaltiesView(APIView):
+    """Hastanın ceza aldığı seans kayıtlarını döner (geç iptal no_show)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .models import AttendanceRecord
+
+        records = (
+            AttendanceRecord.objects.filter(
+                patient=request.user,
+                status="no_show",
+            )
+            .order_by("-date")
+            .values("date", "note", "created_at")
+        )
+        return Response(list(records))
+
+
 class PatientBodyMeasurementListView(APIView):
     """Hastanın kendi vücut ölçümlerini listeler."""
 

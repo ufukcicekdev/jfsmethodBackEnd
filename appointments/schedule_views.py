@@ -32,6 +32,9 @@ class AdminScheduleView(APIView):
             {
                 "slot_duration_minutes": settings.slot_duration_minutes,
                 "slot_capacity": settings.slot_capacity,
+                "slot_break_minutes": settings.slot_break_minutes,
+                "free_cancel_hours": settings.free_cancel_hours,
+                "late_cancel_penalty_minutes": settings.late_cancel_penalty_minutes,
                 "working_days": WorkingDaySerializer(working_days, many=True).data,
                 "holidays": ClinicHolidaySerializer(holidays, many=True).data,
             }
@@ -46,9 +49,10 @@ class AdminScheduleView(APIView):
         settings = ClinicScheduleSettings.get_solo()
         settings.slot_duration_minutes = data["slot_duration_minutes"]
         update_fields = ["slot_duration_minutes"]
-        if "slot_capacity" in data:
-            settings.slot_capacity = data["slot_capacity"]
-            update_fields.append("slot_capacity")
+        for field in ("slot_capacity", "slot_break_minutes", "free_cancel_hours", "late_cancel_penalty_minutes"):
+            if field in data:
+                setattr(settings, field, data[field])
+                update_fields.append(field)
         settings.save(update_fields=update_fields)
 
         for day_data in data["working_days"]:
@@ -64,6 +68,9 @@ class AdminScheduleView(APIView):
             {
                 "slot_duration_minutes": settings.slot_duration_minutes,
                 "slot_capacity": settings.slot_capacity,
+                "slot_break_minutes": settings.slot_break_minutes,
+                "free_cancel_hours": settings.free_cancel_hours,
+                "late_cancel_penalty_minutes": settings.late_cancel_penalty_minutes,
                 "working_days": WorkingDaySerializer(working_days, many=True).data,
                 "holidays": ClinicHolidaySerializer(holidays, many=True).data,
             }

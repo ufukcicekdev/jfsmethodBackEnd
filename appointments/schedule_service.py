@@ -47,6 +47,7 @@ def generate_slot_starts(target_date):
 
     settings = ClinicScheduleSettings.get_solo()
     duration = timedelta(minutes=settings.slot_duration_minutes)
+    step = duration + timedelta(minutes=settings.slot_break_minutes)
     start_dt = datetime.combine(target_date, working_day.start_time)
     end_dt = datetime.combine(target_date, working_day.end_time)
 
@@ -54,7 +55,7 @@ def generate_slot_starts(target_date):
     current = start_dt
     while current + duration <= end_dt:
         slots.append(timezone.make_aware(current))
-        current += duration
+        current += step
 
     return slots
 

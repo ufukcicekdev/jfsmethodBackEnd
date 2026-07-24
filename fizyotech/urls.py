@@ -17,6 +17,7 @@ from accounts.views import (
     ForgotPasswordView,
     MeView,
     MyPackagesView,
+    MyPenaltiesView,
     OnboardingQuestionsView,
     OnboardingSubmitView,
     PatientBodyMeasurementListView,
@@ -78,6 +79,7 @@ urlpatterns = [
         name="fcm-device-unregister",
     ),
     path("api/packages/me/", MyPackagesView.as_view(), name="my-packages"),
+    path("api/packages/penalties/", MyPenaltiesView.as_view(), name="my-penalties"),
     path(
         "api/package-plans/",
         PublicPackagePlansView.as_view(),

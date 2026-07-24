@@ -62,6 +62,18 @@ class ClinicScheduleSettings(models.Model):
         default=1,
         help_text="Aynı doktor ve saatte randevu alabilecek maksimum kişi sayısı",
     )
+    slot_break_minutes = models.PositiveIntegerField(
+        default=0,
+        help_text="Her randevu slotundan sonra bırakılacak dinlenme süresi (dakika)",
+    )
+    free_cancel_hours = models.PositiveIntegerField(
+        default=6,
+        help_text="Randevudan kaç saat öncesine kadar cezasız iptal yapılabilir",
+    )
+    late_cancel_penalty_minutes = models.PositiveIntegerField(
+        default=30,
+        help_text="Bu dakikadan az süre kaldığında iptal edilirse seans hakkı yanar",
+    )
 
     class Meta:
         verbose_name = "Clinic Schedule Settings"

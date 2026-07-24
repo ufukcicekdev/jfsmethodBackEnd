@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.contrib.auth.models import User
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 
 from .models import Appointment, AppointmentStatus
 from .schedule_service import get_available_slots, is_valid_appointment_slot
@@ -104,11 +105,33 @@ class AppointmentCancelView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        from .models import ClinicScheduleSettings
+        settings = ClinicScheduleSettings.get_solo()
+        now = timezone.now()
+        time_left = appointment.appointment_datetime - now
+        late_cancel = time_left <= timedelta(minutes=settings.late_cancel_penalty_minutes)
+
         appointment._notification_actor = request.user
         appointment.status = AppointmentStatus.CANCELLED
         appointment.save(update_fields=["status", "updated_at"])
 
-        return Response(AppointmentSerializer(appointment).data)
+        # Son 30 dakikada iptal → seans hakkı yakar (no_show kaydı)
+        if late_cancel and appointment.package:
+            from accounts.models import AttendanceRecord
+            AttendanceRecord.objects.get_or_create(
+                patient=appointment.patient,
+                date=appointment.appointment_datetime.date(),
+                defaults={
+                    "session_package": appointment.package,
+                    "status": "no_show",
+                    "marked_by": None,
+                    "note": "Son 30 dakikada iptal — seans hakkı düşüldü.",
+                },
+            )
+
+        data = AppointmentSerializer(appointment).data
+        data["late_cancel"] = late_cancel
+        return Response(data)
 
 
 class AvailableSlotsView(APIView):
