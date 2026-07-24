@@ -1,4 +1,4 @@
-from rest_framework import status
+from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -35,6 +35,9 @@ class AdminScheduleView(APIView):
                 "slot_break_minutes": settings.slot_break_minutes,
                 "free_cancel_hours": settings.free_cancel_hours,
                 "late_cancel_penalty_minutes": settings.late_cancel_penalty_minutes,
+                "reminder_24h_enabled": settings.reminder_24h_enabled,
+                "reminder_1h_enabled": settings.reminder_1h_enabled,
+                "reminder_custom_minutes": settings.reminder_custom_minutes,
                 "working_days": WorkingDaySerializer(working_days, many=True).data,
                 "holidays": ClinicHolidaySerializer(holidays, many=True).data,
             }
@@ -49,7 +52,11 @@ class AdminScheduleView(APIView):
         settings = ClinicScheduleSettings.get_solo()
         settings.slot_duration_minutes = data["slot_duration_minutes"]
         update_fields = ["slot_duration_minutes"]
-        for field in ("slot_capacity", "slot_break_minutes", "free_cancel_hours", "late_cancel_penalty_minutes"):
+        for field in (
+            "slot_capacity", "slot_break_minutes", "free_cancel_hours",
+            "late_cancel_penalty_minutes", "reminder_24h_enabled",
+            "reminder_1h_enabled", "reminder_custom_minutes",
+        ):
             if field in data:
                 setattr(settings, field, data[field])
                 update_fields.append(field)
@@ -71,6 +78,9 @@ class AdminScheduleView(APIView):
                 "slot_break_minutes": settings.slot_break_minutes,
                 "free_cancel_hours": settings.free_cancel_hours,
                 "late_cancel_penalty_minutes": settings.late_cancel_penalty_minutes,
+                "reminder_24h_enabled": settings.reminder_24h_enabled,
+                "reminder_1h_enabled": settings.reminder_1h_enabled,
+                "reminder_custom_minutes": settings.reminder_custom_minutes,
                 "working_days": WorkingDaySerializer(working_days, many=True).data,
                 "holidays": ClinicHolidaySerializer(holidays, many=True).data,
             }
@@ -189,3 +199,21 @@ class AdminSlotBlockDeleteView(APIView):
             return Response({"detail": "Bulunamadı."}, status=404)
         block.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PublicCancelPolicyView(APIView):
+    """Randevu iptal politikasını herkese açık döndürür (sözleşme metni için)."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from .models import ClinicScheduleSettings
+        settings = ClinicScheduleSettings.objects.filter(pk=1).first()
+        if not settings:
+            return Response({
+                "free_cancel_hours": 6,
+                "late_cancel_penalty_minutes": 30,
+            })
+        return Response({
+            "free_cancel_hours": settings.free_cancel_hours,
+            "late_cancel_penalty_minutes": settings.late_cancel_penalty_minutes,
+        })

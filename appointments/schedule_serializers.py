@@ -73,6 +73,9 @@ class ClinicScheduleUpdateSerializer(serializers.Serializer):
     slot_break_minutes = serializers.IntegerField(min_value=0, max_value=120, required=False)
     free_cancel_hours = serializers.IntegerField(min_value=0, max_value=72, required=False)
     late_cancel_penalty_minutes = serializers.IntegerField(min_value=0, max_value=1440, required=False)
+    reminder_24h_enabled = serializers.BooleanField(required=False)
+    reminder_1h_enabled = serializers.BooleanField(required=False)
+    reminder_custom_minutes = serializers.IntegerField(min_value=0, max_value=10080, required=False)
     working_days = WorkingDayUpdateSerializer(many=True)
 
     def validate_working_days(self, value):

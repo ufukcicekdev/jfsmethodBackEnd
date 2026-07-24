@@ -189,6 +189,7 @@ def handle_appointment_notifications(sender, instance, created, **kwargs):
 
     from .appointment_email_service import (
         schedule_appointment_approved_email,
+        schedule_appointment_cancelled_email,
         schedule_appointment_created_email,
     )
     from .notification_service import (
@@ -241,6 +242,7 @@ def handle_appointment_notifications(sender, instance, created, **kwargs):
 
     if instance.status == AppointmentStatus.CANCELLED:
         notify_appointment_cancelled(instance, actor or instance.patient)
+        schedule_appointment_cancelled_email(instance.pk)
         if actor and actor.is_staff:
             # Admin iptal etti -> hastaya bildir
             _push_patient_status_change(instance, AppointmentStatus.CANCELLED)

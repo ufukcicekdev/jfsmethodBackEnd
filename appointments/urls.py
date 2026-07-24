@@ -8,6 +8,7 @@ from .views import (
     AvailableSlotsView,
     DoctorListView,
 )
+from .schedule_views import PublicCancelPolicyView
 
 urlpatterns = [
     path("", AppointmentListCreateView.as_view(), name="appointment-list"),
@@ -24,4 +25,5 @@ urlpatterns = [
     ),
     path("available-slots/", AvailableSlotsView.as_view(), name="available-slots"),
     path("doctors/", DoctorListView.as_view(), name="doctor-list"),
+    path("cancel-policy/", PublicCancelPolicyView.as_view(), name="cancel-policy"),
 ]

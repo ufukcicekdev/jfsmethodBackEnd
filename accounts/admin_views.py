@@ -510,6 +510,25 @@ class AdminPatientPackageListCreateView(APIView):
             note=data.get("note", ""),
         )
 
+        # Eski öğrenci aktarımı: geçmişte kullanılmış seans kayıtları
+        used_sessions = data.get("used_sessions") or 0
+        if used_sessions > 0:
+            from appointments.models import AttendanceRecord
+            import datetime
+            base_date = data.get("purchased_at") or timezone.localdate()
+            records = [
+                AttendanceRecord(
+                    patient=patient,
+                    session_package=package,
+                    date=base_date - datetime.timedelta(days=used_sessions - i),
+                    status="came",
+                    note="Sisteme aktarılan geçmiş seans",
+                    marked_by=request.user,
+                )
+                for i in range(used_sessions)
+            ]
+            AttendanceRecord.objects.bulk_create(records)
+
         # Pakete bağlanmamış, yaklaşan aktif randevuları bu pakete bağla
         Appointment.objects.filter(
             patient=patient,

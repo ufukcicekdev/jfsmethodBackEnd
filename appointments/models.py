@@ -1,3 +1,4 @@
+import uuid
 from datetime import time
 
 from django.conf import settings
@@ -73,6 +74,18 @@ class ClinicScheduleSettings(models.Model):
     late_cancel_penalty_minutes = models.PositiveIntegerField(
         default=30,
         help_text="Bu dakikadan az süre kaldığında iptal edilirse seans hakkı yanar",
+    )
+    reminder_24h_enabled = models.BooleanField(
+        default=True,
+        help_text="24 saat öncesi hatırlatma bildirimi gönderilsin mi",
+    )
+    reminder_1h_enabled = models.BooleanField(
+        default=True,
+        help_text="1 saat öncesi hatırlatma bildirimi gönderilsin mi",
+    )
+    reminder_custom_minutes = models.PositiveIntegerField(
+        default=0,
+        help_text="Ekstra hatırlatma: kaç dakika öncesi (0 = kapalı)",
     )
 
     class Meta:
@@ -194,8 +207,10 @@ class Appointment(models.Model):
         blank=True,
         help_text="Reason when appointment is cancelled (e.g. day cancellation)",
     )
+    ical_uid = models.CharField(max_length=100, unique=True, blank=True)
     reminder_24h_sent = models.BooleanField(default=False)
     reminder_1h_sent = models.BooleanField(default=False)
+    reminder_custom_sent = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -207,6 +222,11 @@ class Appointment(models.Model):
             models.Index(fields=["appointment_datetime", "status"]),
             models.Index(fields=["patient", "status"]),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.ical_uid:
+            self.ical_uid = f"{uuid.uuid4()}@jfsmethod.com"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return (
