@@ -107,6 +107,21 @@ class AdminDashboardView(APIView):
             for item in top_exercises
         ]
 
+        week_start = today - timedelta(days=today.weekday())
+
+        completions_today = ExerciseCompletion.objects.filter(
+            completed_at__date=today
+        ).count()
+        completions_this_week = ExerciseCompletion.objects.filter(
+            completed_at__date__gte=week_start
+        ).count()
+        students_completed_today = (
+            ExerciseCompletion.objects.filter(completed_at__date=today)
+            .values("patient")
+            .distinct()
+            .count()
+        )
+
         return Response(
             {
                 "patient_count": User.objects.filter(
@@ -126,6 +141,9 @@ class AdminDashboardView(APIView):
                 "active_packages": SessionPackage.objects.filter(is_active=True).count(),
                 "weekly_attendance": weekly_attendance,
                 "top_exercises": top_exercises_data,
+                "completions_today": completions_today,
+                "completions_this_week": completions_this_week,
+                "students_completed_today": students_completed_today,
             }
         )
 
