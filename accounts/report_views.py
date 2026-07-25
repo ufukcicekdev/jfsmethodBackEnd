@@ -28,15 +28,22 @@ def _all_patients_data() -> list:
     patients = User.objects.filter(is_staff=False, is_active=True).order_by("last_name", "first_name")
     rows = []
     for p in patients:
-        active_pkg = SessionPackage.objects.filter(patient=p, is_active=True).first()
-        came = AttendanceRecord.objects.filter(patient=p, status="came").count()
-        no_show = AttendanceRecord.objects.filter(patient=p, status="no_show").count()
-        rows.append({
-            "patient": p,
-            "active_pkg": active_pkg,
-            "came": came,
-            "no_show": no_show,
-        })
+        packages = SessionPackage.objects.filter(patient=p).select_related("plan").order_by("-is_active", "-purchased_at")
+        if packages.exists():
+            for pkg in packages:
+                rows.append({
+                    "patient": p,
+                    "pkg": pkg,
+                    "came": pkg.attendance_records.filter(status="came").count(),
+                    "no_show": pkg.attendance_records.filter(status="no_show").count(),
+                })
+        else:
+            rows.append({
+                "patient": p,
+                "pkg": None,
+                "came": 0,
+                "no_show": 0,
+            })
     return rows
 
 
@@ -118,7 +125,7 @@ def _build_all_xlsx(rows: list) -> bytes:
     header_fill = PatternFill("solid", fgColor="1D4ED8")
     header_font = Font(bold=True, color="FFFFFF")
 
-    headers = ["Ad Soyad", "E-posta", "Aktif Paket", "Toplam Seans", "Geldi", "Gelmedi", "Kalan Seans", "Ödeme"]
+    headers = ["Ad Soyad", "E-posta", "Paket", "Toplam Seans", "Geldi", "Gelmedi", "Kalan Seans", "Ödeme", "Durum"]
     for col, title in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=title)
         cell.font = header_font
@@ -127,7 +134,7 @@ def _build_all_xlsx(rows: list) -> bytes:
 
     for r in rows:
         p = r["patient"]
-        pkg = r["active_pkg"]
+        pkg = r["pkg"]
         ws.append([
             p.get_full_name() or p.username,
             p.email,
@@ -137,6 +144,7 @@ def _build_all_xlsx(rows: list) -> bytes:
             r["no_show"],
             pkg.remaining_sessions if pkg else 0,
             ("Ödendi" if pkg.is_paid else "Bekliyor") if pkg else "—",
+            ("Aktif" if pkg.is_active else "Pasif") if pkg else "—",
         ])
 
     for col in ws.columns:
@@ -234,10 +242,10 @@ def _build_all_pdf(rows: list) -> bytes:
     story.append(Paragraph("Tüm Öğrenciler Raporu", ParagraphStyle("t", parent=styles["Heading1"], textColor=blue, fontSize=16)))
     story.append(Spacer(1, 0.4*cm))
 
-    data = [["Ad Soyad", "E-posta", "Aktif Paket", "Toplam", "Geldi", "Gelmedi", "Kalan", "Ödeme"]]
+    data = [["Ad Soyad", "E-posta", "Paket", "Toplam", "Geldi", "Gelmedi", "Kalan", "Ödeme", "Durum"]]
     for r in rows:
         p = r["patient"]
-        pkg = r["active_pkg"]
+        pkg = r["pkg"]
         data.append([
             p.get_full_name() or p.username,
             p.email,
@@ -247,9 +255,10 @@ def _build_all_pdf(rows: list) -> bytes:
             r["no_show"],
             pkg.remaining_sessions if pkg else 0,
             ("Ödendi" if pkg.is_paid else "Bekliyor") if pkg else "—",
+            ("Aktif" if pkg.is_active else "Pasif") if pkg else "—",
         ])
 
-    col_w = [4*cm, 5*cm, 4*cm, 2.2*cm, 2.2*cm, 2.2*cm, 2.2*cm, 3*cm]
+    col_w = [3.5*cm, 4.5*cm, 3.5*cm, 2*cm, 2*cm, 2*cm, 2*cm, 2.5*cm, 2*cm]
     t = Table(data, colWidths=col_w, repeatRows=1)
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), blue),
