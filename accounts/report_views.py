@@ -157,15 +157,41 @@ def _build_all_xlsx(rows: list) -> bytes:
 
 # ── PDF builders ──────────────────────────────────────────────────────────────
 
+def _register_turkish_font():
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import os
+    if "TurkishFont" in pdfmetrics.getRegisteredFontNames():
+        return "TurkishFont"
+    candidates = [
+        "/nix/store",  # nixpacks DejaVu path (glob below)
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    ]
+    # Find DejaVuSans.ttf in nix store
+    import glob
+    nix_hits = glob.glob("/nix/store/*/share/fonts/truetype/DejaVuSans.ttf")
+    if not nix_hits:
+        nix_hits = glob.glob("/nix/store/*dejavu*/share/fonts/truetype/*.ttf")
+    font_path = None
+    for path in nix_hits + candidates[1:]:
+        if os.path.isfile(path):
+            font_path = path
+            break
+    if font_path:
+        pdfmetrics.registerFont(TTFont("TurkishFont", font_path))
+        return "TurkishFont"
+    return "Helvetica"
+
+
 def _build_patient_pdf(data: dict) -> bytes:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.units import cm
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    import os
+
+    font_name = _register_turkish_font()
 
     patient = data["patient"]
     buf = io.BytesIO()
@@ -174,26 +200,28 @@ def _build_patient_pdf(data: dict) -> bytes:
     blue = colors.HexColor("#1D4ED8")
     story = []
 
-    title_style = ParagraphStyle("title", parent=styles["Heading1"], textColor=blue, fontSize=16)
+    title_style = ParagraphStyle("title", parent=styles["Heading1"], fontName=font_name, textColor=blue, fontSize=16)
+    normal_style = ParagraphStyle("normal", parent=styles["Normal"], fontName=font_name)
+    h2_style = ParagraphStyle("h2", parent=styles["Heading2"], fontName=font_name)
     story.append(Paragraph(f"Öğrenci Raporu: {patient.get_full_name() or patient.username}", title_style))
-    story.append(Paragraph(f"E-posta: {patient.email}", styles["Normal"]))
+    story.append(Paragraph(f"E-posta: {patient.email}", normal_style))
     story.append(Spacer(1, 0.5*cm))
 
     for item in data["packages"]:
         pkg = item["pkg"]
-        pkg_name = pkg.name or (pkg.plan.name if pkg.plan else "—")
-        story.append(Paragraph(f"<b>{pkg_name}</b> — {'Aktif' if pkg.is_active else 'Pasif'}", styles["Heading2"]))
+        pkg_name = pkg.name or (pkg.plan.name if pkg.plan else "-")
+        story.append(Paragraph(f"{pkg_name} - {'Aktif' if pkg.is_active else 'Pasif'}", h2_style))
 
         summary = [
-            ["Toplam", "Geldi", "Gelmedi", "Kalan", "Ödeme"],
+            ["Toplam", "Geldi", "Gelmedi", "Kalan", "Odeme"],
             [pkg.total_sessions, pkg.used_sessions, pkg.no_show_count, pkg.remaining_sessions,
-             "Ödendi" if pkg.is_paid else "Bekliyor"],
+             "Odendi" if pkg.is_paid else "Bekliyor"],
         ]
         t = Table(summary, colWidths=[3*cm]*5)
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), blue),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTNAME", (0, 0), (-1, -1), font_name),
             ("ALIGN", (0, 0), (-1, -1), "CENTER"),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F1F5F9")]),
@@ -213,7 +241,7 @@ def _build_patient_pdf(data: dict) -> bytes:
             at.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3B82F6")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTNAME", (0, 0), (-1, -1), font_name),
                 ("GRID", (0, 0), (-1, -1), 0.3, colors.lightgrey),
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
@@ -233,29 +261,31 @@ def _build_all_pdf(rows: list) -> bytes:
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
+    font_name = _register_turkish_font()
+
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=1.5*cm, rightMargin=1.5*cm, topMargin=2*cm, bottomMargin=2*cm)
     styles = getSampleStyleSheet()
     blue = colors.HexColor("#1D4ED8")
     story = []
 
-    story.append(Paragraph("Tüm Öğrenciler Raporu", ParagraphStyle("t", parent=styles["Heading1"], textColor=blue, fontSize=16)))
+    story.append(Paragraph("Tum Ogrenciler Raporu", ParagraphStyle("t", parent=styles["Heading1"], fontName=font_name, textColor=blue, fontSize=16)))
     story.append(Spacer(1, 0.4*cm))
 
-    data = [["Ad Soyad", "E-posta", "Paket", "Toplam", "Geldi", "Gelmedi", "Kalan", "Ödeme", "Durum"]]
+    data = [["Ad Soyad", "E-posta", "Paket", "Toplam", "Geldi", "Gelmedi", "Kalan", "Odeme", "Durum"]]
     for r in rows:
         p = r["patient"]
         pkg = r["pkg"]
         data.append([
             p.get_full_name() or p.username,
             p.email,
-            (pkg.name or (pkg.plan.name if pkg.plan else "—")) if pkg else "—",
+            (pkg.name or (pkg.plan.name if pkg.plan else "-")) if pkg else "-",
             pkg.total_sessions if pkg else 0,
             r["came"],
             r["no_show"],
             pkg.remaining_sessions if pkg else 0,
-            ("Ödendi" if pkg.is_paid else "Bekliyor") if pkg else "—",
-            ("Aktif" if pkg.is_active else "Pasif") if pkg else "—",
+            ("Odendi" if pkg.is_paid else "Bekliyor") if pkg else "-",
+            ("Aktif" if pkg.is_active else "Pasif") if pkg else "-",
         ])
 
     col_w = [3.5*cm, 4.5*cm, 3.5*cm, 2*cm, 2*cm, 2*cm, 2*cm, 2.5*cm, 2*cm]
@@ -263,7 +293,7 @@ def _build_all_pdf(rows: list) -> bytes:
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), blue),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTNAME", (0, 0), (-1, -1), font_name),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("ALIGN", (0, 1), (1, -1), "LEFT"),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.lightgrey),
