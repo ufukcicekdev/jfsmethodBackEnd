@@ -522,37 +522,20 @@ class AdminPatientPackageListCreateView(APIView):
             price = plan.price
 
         is_paid = data.get("is_paid", False)
+        historical_sessions = data.get("used_sessions") or 0
         package = SessionPackage.objects.create(
             patient=patient,
             created_by=request.user,
             plan=plan,
             name=name,
             total_sessions=total_sessions,
+            historical_sessions=historical_sessions,
             price=price,
             is_paid=is_paid,
             paid_at=timezone.localdate() if is_paid else None,
             purchased_at=data.get("purchased_at") or timezone.localdate(),
             note=data.get("note", ""),
         )
-
-        # Eski öğrenci aktarımı: geçmişte kullanılmış seans kayıtları
-        used_sessions = data.get("used_sessions") or 0
-        if used_sessions > 0:
-            from accounts.models import AttendanceRecord
-            import datetime
-            base_date = data.get("purchased_at") or timezone.localdate()
-            records = [
-                AttendanceRecord(
-                    patient=patient,
-                    session_package=package,
-                    date=base_date - datetime.timedelta(days=used_sessions - i),
-                    status="came",
-                    note="Sisteme aktarılan geçmiş seans",
-                    marked_by=request.user,
-                )
-                for i in range(used_sessions)
-            ]
-            AttendanceRecord.objects.bulk_create(records, ignore_conflicts=True)
 
         # Pakete bağlanmamış, yaklaşan aktif randevuları bu pakete bağla
         Appointment.objects.filter(

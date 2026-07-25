@@ -76,6 +76,7 @@ class SessionPackage(models.Model):
         help_text="Örn. '12 Seanslık Fizyoterapi Paketi'",
     )
     total_sessions = models.PositiveIntegerField(default=12)
+    historical_sessions = models.PositiveIntegerField(default=0)
     price = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True
     )
@@ -111,7 +112,7 @@ class SessionPackage(models.Model):
 
     @property
     def used_sessions(self):
-        return self.attendance_records.filter(status="came").count()
+        return self.historical_sessions + self.attendance_records.filter(status="came").count()
 
     @property
     def no_show_count(self):

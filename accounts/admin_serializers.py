@@ -75,6 +75,7 @@ class SessionPackageSerializer(serializers.ModelSerializer):
             "plan_name",
             "name",
             "total_sessions",
+            "historical_sessions",
             "price",
             "is_paid",
             "paid_at",
