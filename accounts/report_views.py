@@ -276,7 +276,7 @@ class AdminPatientReportView(APIView):
         if not patient:
             return HttpResponse(status=404)
 
-        fmt = request.query_params.get("format", "xlsx")
+        fmt = request.query_params.get("report_format", "xlsx")
         data = _patient_report_data(patient)
         name = (patient.get_full_name() or patient.username).replace(" ", "_")
 
@@ -296,7 +296,7 @@ class AdminAllPatientsReportView(APIView):
     permission_classes = [IsStaff]
 
     def get(self, request):
-        fmt = request.query_params.get("format", "xlsx")
+        fmt = request.query_params.get("report_format", "xlsx")
         rows = _all_patients_data()
 
         if fmt == "pdf":
