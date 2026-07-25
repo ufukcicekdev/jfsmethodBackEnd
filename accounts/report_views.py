@@ -160,26 +160,13 @@ def _build_all_xlsx(rows: list) -> bytes:
 def _register_turkish_font():
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    import os
+    import os, reportlab
     if "TurkishFont" in pdfmetrics.getRegisteredFontNames():
         return "TurkishFont"
-    candidates = [
-        "/nix/store",  # nixpacks DejaVu path (glob below)
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/dejavu/DejaVuSans.ttf",
-    ]
-    # Find DejaVuSans.ttf in nix store
-    import glob
-    nix_hits = glob.glob("/nix/store/*/share/fonts/truetype/DejaVuSans.ttf")
-    if not nix_hits:
-        nix_hits = glob.glob("/nix/store/*dejavu*/share/fonts/truetype/*.ttf")
-    font_path = None
-    for path in nix_hits + candidates[1:]:
-        if os.path.isfile(path):
-            font_path = path
-            break
-    if font_path:
-        pdfmetrics.registerFont(TTFont("TurkishFont", font_path))
+    # Vera.ttf ships with reportlab — always available after pip install
+    vera_path = os.path.join(os.path.dirname(reportlab.__file__), "fonts", "Vera.ttf")
+    if os.path.isfile(vera_path):
+        pdfmetrics.registerFont(TTFont("TurkishFont", vera_path))
         return "TurkishFont"
     return "Helvetica"
 
