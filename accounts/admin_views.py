@@ -552,7 +552,7 @@ class AdminPatientPackageListCreateView(APIView):
                 )
                 for i in range(used_sessions)
             ]
-            AttendanceRecord.objects.bulk_create(records)
+            AttendanceRecord.objects.bulk_create(records, ignore_conflicts=True)
 
         # Pakete bağlanmamış, yaklaşan aktif randevuları bu pakete bağla
         Appointment.objects.filter(
