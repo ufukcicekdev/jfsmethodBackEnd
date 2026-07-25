@@ -115,12 +115,18 @@ class AdminDashboardView(APIView):
         completions_this_week = ExerciseCompletion.objects.filter(
             completed_at__date__gte=week_start
         ).count()
-        students_completed_today = (
+        completed_today_patients = (
             ExerciseCompletion.objects.filter(completed_at__date=today)
-            .values("patient")
+            .values("patient__id", "patient__first_name", "patient__last_name", "patient__username")
             .distinct()
-            .count()
         )
+        students_completed_today = len(completed_today_patients)
+        students_completed_today_names = [
+            p["patient__first_name"] + " " + p["patient__last_name"]
+            if (p["patient__first_name"] or p["patient__last_name"])
+            else p["patient__username"]
+            for p in completed_today_patients
+        ]
 
         return Response(
             {
@@ -144,6 +150,7 @@ class AdminDashboardView(APIView):
                 "completions_today": completions_today,
                 "completions_this_week": completions_this_week,
                 "students_completed_today": students_completed_today,
+                "students_completed_today_names": students_completed_today_names,
             }
         )
 
