@@ -522,14 +522,12 @@ class AdminPatientPackageListCreateView(APIView):
             price = plan.price
 
         is_paid = data.get("is_paid", False)
-        historical_sessions = data.get("used_sessions") or 0
         package = SessionPackage.objects.create(
             patient=patient,
             created_by=request.user,
             plan=plan,
             name=name,
             total_sessions=total_sessions,
-            historical_sessions=historical_sessions,
             price=price,
             is_paid=is_paid,
             paid_at=timezone.localdate() if is_paid else None,

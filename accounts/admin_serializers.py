@@ -104,7 +104,6 @@ class SessionPackageCreateSerializer(serializers.Serializer):
     plan_id = serializers.IntegerField(required=False, allow_null=True)
     name = serializers.CharField(required=False, allow_blank=True, max_length=120)
     total_sessions = serializers.IntegerField(required=False, min_value=1)
-    used_sessions = serializers.IntegerField(required=False, min_value=0, default=0)
     price = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True
     )
@@ -116,12 +115,6 @@ class SessionPackageCreateSerializer(serializers.Serializer):
         if not attrs.get("plan_id") and not attrs.get("total_sessions"):
             raise serializers.ValidationError(
                 "Bir paket planı seçin veya seans sayısını girin."
-            )
-        total = attrs.get("total_sessions") or 0
-        used = attrs.get("used_sessions") or 0
-        if used > total and total > 0:
-            raise serializers.ValidationError(
-                "Kullanılan seans sayısı toplam seans sayısını geçemez."
             )
         return attrs
 

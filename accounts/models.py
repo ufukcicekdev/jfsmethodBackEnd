@@ -112,7 +112,7 @@ class SessionPackage(models.Model):
 
     @property
     def used_sessions(self):
-        return self.historical_sessions + self.attendance_records.filter(status="came").count()
+        return self.attendance_records.filter(status="came").count()
 
     @property
     def no_show_count(self):
