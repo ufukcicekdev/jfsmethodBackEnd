@@ -47,6 +47,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
+        # Kullanıcı adı alanına e-posta girilmişse kullanıcı adına çevir
+        username_or_email = attrs.get("username", "")
+        if "@" in username_or_email:
+            from django.contrib.auth.models import User
+            user = User.objects.filter(email__iexact=username_or_email, is_active=True).first()
+            if user:
+                attrs["username"] = user.username
         data = super().validate(attrs)
         data["user"] = UserPublicSerializer(self.user).data
         return data
