@@ -597,6 +597,32 @@ class AdminPatientPackageDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class AdminPackageAttendanceHistoryView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request, pk, package_id):
+        from accounts.models import AttendanceRecord
+        package = SessionPackage.objects.filter(pk=package_id, patient_id=pk).first()
+        if not package:
+            return Response({"detail": "Paket bulunamadı."}, status=404)
+        records = AttendanceRecord.objects.filter(
+            session_package=package
+        ).order_by("-date").values("id", "date", "status", "note")
+        return Response(list(records))
+
+    def delete(self, request, pk, package_id):
+        from accounts.models import AttendanceRecord
+        record_id = request.query_params.get("record_id")
+        if not record_id:
+            return Response({"detail": "record_id gerekli."}, status=400)
+        deleted, _ = AttendanceRecord.objects.filter(
+            pk=record_id, session_package__patient_id=pk, session_package_id=package_id
+        ).delete()
+        if not deleted:
+            return Response({"detail": "Kayıt bulunamadı."}, status=404)
+        return Response(status=204)
+
+
 class AdminPackagePlanListCreateView(APIView):
     permission_classes = [IsStaff]
     parser_classes = [MultiPartParser, FormParser]

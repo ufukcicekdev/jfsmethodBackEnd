@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .report_views import AdminPatientReportView, AdminAllPatientsReportView
+from .admin_views import AdminPackageAttendanceHistoryView
 from .admin_views import (
     AdminDietProgramDetailView,
     AdminDietProgramListView,
@@ -115,6 +116,11 @@ urlpatterns = [
         "patients/<int:pk>/packages/<int:package_id>/",
         AdminPatientPackageDetailView.as_view(),
         name="admin-patient-package-detail",
+    ),
+    path(
+        "patients/<int:pk>/packages/<int:package_id>/attendance/",
+        AdminPackageAttendanceHistoryView.as_view(),
+        name="admin-package-attendance-history",
     ),
     path(
         "patients/<int:patient_id>/measurements/",
