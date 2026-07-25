@@ -538,7 +538,7 @@ class AdminPatientPackageListCreateView(APIView):
         # Eski öğrenci aktarımı: geçmişte kullanılmış seans kayıtları
         used_sessions = data.get("used_sessions") or 0
         if used_sessions > 0:
-            from appointments.models import AttendanceRecord
+            from accounts.models import AttendanceRecord
             import datetime
             base_date = data.get("purchased_at") or timezone.localdate()
             records = [
