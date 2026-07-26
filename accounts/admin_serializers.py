@@ -205,7 +205,18 @@ class AdminPatientListSerializer(serializers.ModelSerializer):
 
     def get_active_packages(self, obj):
         pkgs = SessionPackage.objects.filter(patient=obj, is_active=True)
-        return [{"id": p.id, "name": p.name or f"{p.total_sessions} seanslık paket", "remaining": p.remaining_sessions} for p in pkgs]
+        names = [p.name or f"{p.total_sessions} seanslık paket" for p in pkgs]
+        rows = []
+        for i, p in enumerate(pkgs):
+            base = names[i]
+            # Add date suffix only when multiple packages share the same name
+            if names.count(base) > 1:
+                date_str = p.purchased_at.strftime("%d.%m.%Y") if p.purchased_at else str(p.id)
+                label = f"{base} ({date_str})"
+            else:
+                label = base
+            rows.append({"id": p.id, "name": label, "remaining": p.remaining_sessions})
+        return rows
 
 
 class AdminPatientDetailSerializer(AdminPatientListSerializer):
