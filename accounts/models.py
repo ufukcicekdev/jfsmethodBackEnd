@@ -787,3 +787,53 @@ class LandingWhyUsItem(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class AuditLog(models.Model):
+    ACTION_CHOICES = [
+        ("login", "Giriş"),
+        ("login_fail", "Başarısız Giriş"),
+        ("register", "Kayıt"),
+        ("impersonate", "Kullanıcı Olarak Giriş"),
+        ("appointment_create", "Randevu Oluşturma"),
+        ("appointment_cancel", "Randevu İptal"),
+        ("appointment_status", "Randevu Durum Güncelleme"),
+        ("package_assign", "Paket Atama"),
+        ("package_delete", "Paket Silme"),
+        ("package_status", "Paket Durum Güncelleme"),
+        ("attendance_mark", "Devam İşareti"),
+        ("attendance_delete", "Devam Silme"),
+        ("patient_create", "Öğrenci Oluşturma"),
+        ("patient_delete", "Öğrenci Silme"),
+        ("password_change", "Şifre Değiştirme"),
+        ("other", "Diğer"),
+    ]
+
+    STATUS_CHOICES = [
+        ("success", "Başarılı"),
+        ("failure", "Başarısız"),
+        ("error", "Hata"),
+    ]
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="audit_logs_as_actor"
+    )
+    target_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="audit_logs_as_target"
+    )
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="success")
+    detail = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Sistem Logu"
+        verbose_name_plural = "Sistem Logları"
+
+    def __str__(self):
+        return f"{self.action} — {self.actor} — {self.created_at:%Y-%m-%d %H:%M}"

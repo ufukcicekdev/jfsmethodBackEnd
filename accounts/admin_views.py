@@ -543,6 +543,10 @@ class AdminPatientPackageListCreateView(APIView):
             appointment_datetime__gte=timezone.now(),
         ).update(package=package)
 
+        from accounts.audit import log_action
+        log_action("package_assign", actor=request.user, target_user=patient, request=request,
+                   detail={"package_id": package.id, "name": name, "total_sessions": total_sessions, "price": str(price or "")})
+
         return Response(
             SessionPackageSerializer(package).data,
             status=status.HTTP_201_CREATED,
@@ -587,12 +591,18 @@ class AdminPatientPackageDetailView(APIView):
             package.is_paid = bool(request.data["is_paid"])
             package.paid_at = timezone.localdate() if package.is_paid else None
         package.save()
+        from accounts.audit import log_action
+        log_action("package_status", actor=request.user, target_user=package.patient, request=request,
+                   detail={"package_id": package.id, "name": package.name, "changes": request.data})
         return Response(SessionPackageSerializer(package).data)
 
     def delete(self, request, pk, package_id):
         package = self.get_object(pk, package_id)
         if not package:
             return Response({"detail": "Paket bulunamadı."}, status=404)
+        from accounts.audit import log_action
+        log_action("package_delete", actor=request.user, target_user=package.patient, request=request,
+                   detail={"package_id": package.id, "name": package.name, "total_sessions": package.total_sessions})
         package.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -612,14 +622,19 @@ class AdminPackageAttendanceHistoryView(APIView):
 
     def delete(self, request, pk, package_id):
         from accounts.models import AttendanceRecord
+        from accounts.audit import log_action
         record_id = request.query_params.get("record_id")
         if not record_id:
             return Response({"detail": "record_id gerekli."}, status=400)
-        deleted, _ = AttendanceRecord.objects.filter(
+        record = AttendanceRecord.objects.filter(
             pk=record_id, session_package__patient_id=pk, session_package_id=package_id
-        ).delete()
-        if not deleted:
+        ).first()
+        if not record:
             return Response({"detail": "Kayıt bulunamadı."}, status=404)
+        patient = record.session_package.patient
+        log_action("attendance_delete", actor=request.user, target_user=patient, request=request,
+                   detail={"record_id": record_id, "date": str(record.date), "status": record.status})
+        record.delete()
         return Response(status=204)
 
 
@@ -1049,6 +1064,10 @@ class AdminAttendanceView(APIView):
                 "session_package": session_package,
             },
         )
+        from accounts.audit import log_action
+        log_action("attendance_mark", actor=request.user, target_user=patient, request=request,
+                   detail={"date": str(date), "status": record_status,
+                           "package_id": session_package.id if session_package else None})
         return Response({"id": record.id, "status": record.status, "date": str(record.date)})
 
     def delete(self, request, patient_id):
@@ -1360,11 +1379,64 @@ class AdminImpersonateView(APIView):
 
     def post(self, request, pk):
         from rest_framework_simplejwt.tokens import RefreshToken
+        from accounts.audit import log_action
         patient = User.objects.filter(pk=pk, is_staff=False, is_active=True).first()
         if not patient:
             return Response({"detail": "Öğrenci bulunamadı."}, status=404)
         refresh = RefreshToken.for_user(patient)
+        log_action("impersonate", actor=request.user, target_user=patient, request=request,
+                   detail={"target_username": patient.username, "target_email": patient.email})
         return Response({
             "access": str(refresh.access_token),
             "refresh": str(refresh),
         })
+
+
+class AdminAuditLogView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        from accounts.models import AuditLog
+        qs = AuditLog.objects.select_related("actor", "target_user").order_by("-created_at")
+
+        action = request.query_params.get("action")
+        status_filter = request.query_params.get("status")
+        search = request.query_params.get("search")
+        if action:
+            qs = qs.filter(action=action)
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(actor__username__icontains=search) |
+                Q(actor__first_name__icontains=search) |
+                Q(actor__last_name__icontains=search) |
+                Q(target_user__username__icontains=search) |
+                Q(target_user__first_name__icontains=search) |
+                Q(target_user__last_name__icontains=search)
+            )
+
+        qs = qs[:500]
+
+        def fmt_user(u):
+            if not u:
+                return None
+            return {"id": u.id, "username": u.username,
+                    "full_name": u.get_full_name() or u.username}
+
+        data = [
+            {
+                "id": log.id,
+                "action": log.action,
+                "action_display": log.get_action_display(),
+                "status": log.status,
+                "actor": fmt_user(log.actor),
+                "target_user": fmt_user(log.target_user),
+                "detail": log.detail,
+                "ip_address": log.ip_address,
+                "created_at": log.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            for log in qs
+        ]
+        return Response(data)

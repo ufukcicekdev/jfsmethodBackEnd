@@ -32,6 +32,13 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
             return Appointment.objects.select_related("patient", "doctor").all()
         return Appointment.objects.filter(patient=user).select_related("doctor")
 
+    def perform_create(self, serializer):
+        appointment = serializer.save()
+        from accounts.audit import log_action
+        log_action("appointment_create", actor=self.request.user, request=self.request,
+                   detail={"appointment_id": appointment.id,
+                           "datetime": str(appointment.appointment_datetime)})
+
 
 class AppointmentDetailView(generics.RetrieveAPIView):
     serializer_class = AppointmentSerializer
@@ -129,6 +136,11 @@ class AppointmentCancelView(APIView):
                 },
             )
 
+        from accounts.audit import log_action
+        log_action("appointment_cancel", actor=request.user, target_user=appointment.patient, request=request,
+                   detail={"appointment_id": appointment.id,
+                           "datetime": str(appointment.appointment_datetime),
+                           "late_cancel": late_cancel})
         data = AppointmentSerializer(appointment).data
         data["late_cancel"] = late_cancel
         return Response(data)

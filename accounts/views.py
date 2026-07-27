@@ -31,6 +31,20 @@ logger = logging.getLogger(__name__)
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
+    def post(self, request, *args, **kwargs):
+        from accounts.audit import log_action
+        from django.contrib.auth.models import User
+        response = super().post(request, *args, **kwargs)
+        username = request.data.get("username", "")
+        user = User.objects.filter(username=username).first()
+        if response.status_code == 200:
+            log_action("login", actor=user, request=request,
+                       detail={"username": username})
+        else:
+            log_action("login_fail", request=request, status="failure",
+                       detail={"username": username})
+        return response
+
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -45,8 +59,11 @@ class RegisterView(APIView):
         refresh = RefreshToken.for_user(user)
 
         from appointments.notification_service import notify_patient_registered
+        from accounts.audit import log_action
 
         notify_patient_registered(user)
+        log_action("register", actor=user, request=request,
+                   detail={"username": user.username, "email": user.email})
 
         return Response(
             {
