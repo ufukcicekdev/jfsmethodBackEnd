@@ -10,6 +10,7 @@ class BlogTopicSerializer(serializers.ModelSerializer):
 
 class BlogPostListSerializer(serializers.ModelSerializer):
     excerpt = serializers.SerializerMethodField()
+    cover_image = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPost
@@ -23,6 +24,18 @@ class BlogPostListSerializer(serializers.ModelSerializer):
         text = re.sub(r"<[^>]+>", " ", obj.content or "")
         text = re.sub(r"\s+", " ", text).strip()
         return text[:200]
+
+    def get_cover_image(self, obj):
+        if obj.cover_image:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(obj.cover_image.url)
+            return obj.cover_image.url
+        import re
+        match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', obj.content or "")
+        if match:
+            return match.group(1)
+        return None
 
 
 class BlogPostDetailSerializer(serializers.ModelSerializer):
