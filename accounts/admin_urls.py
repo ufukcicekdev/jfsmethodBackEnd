@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .report_views import AdminPatientReportView, AdminAllPatientsReportView
-from .admin_views import AdminPackageAttendanceHistoryView
+from .admin_views import AdminPackageAttendanceHistoryView, AdminImpersonateView
 from .admin_views import (
     AdminDietProgramDetailView,
     AdminDietProgramListView,
@@ -229,6 +229,7 @@ urlpatterns = [
     path("patients/<int:patient_id>/diet-assignments/", AdminPatientDietAssignmentListView.as_view(), name="admin-patient-diet-assignments"),
     path("patients/<int:patient_id>/diet-assignments/<int:assignment_id>/", AdminPatientDietAssignmentDetailView.as_view(), name="admin-patient-diet-assignment-detail"),
     path("patients/<int:patient_id>/attendance/", AdminAttendanceView.as_view(), name="admin-patient-attendance"),
+    path("patients/<int:pk>/impersonate/", AdminImpersonateView.as_view(), name="admin-patient-impersonate"),
     path("patients/<int:pk>/report/", AdminPatientReportView.as_view(), name="admin-patient-report"),
     path("patients/report/", AdminAllPatientsReportView.as_view(), name="admin-all-patients-report"),
     path("testimonials/", AdminTestimonialListView.as_view(), name="admin-testimonials"),

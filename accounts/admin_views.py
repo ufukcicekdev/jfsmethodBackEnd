@@ -1353,3 +1353,18 @@ class AdminPatientDietAssignmentDetailView(APIView):
             return Response({"detail": "Bulunamadı."}, status=404)
         obj.delete()
         return Response(status=204)
+
+
+class AdminImpersonateView(APIView):
+    permission_classes = [IsStaff]
+
+    def post(self, request, pk):
+        from rest_framework_simplejwt.tokens import RefreshToken
+        patient = User.objects.filter(pk=pk, is_staff=False, is_active=True).first()
+        if not patient:
+            return Response({"detail": "Öğrenci bulunamadı."}, status=404)
+        refresh = RefreshToken.for_user(patient)
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+        })
