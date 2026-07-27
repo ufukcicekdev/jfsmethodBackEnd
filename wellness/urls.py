@@ -15,6 +15,7 @@ from .views import (
     DailyWaterView,
     PainMapView,
     PatientExerciseListView,
+    PatientProgressPhotoDeleteView,
     PatientProgressPhotoListView,
     WellnessDashboardView,
 )
@@ -32,6 +33,11 @@ urlpatterns = [
         "progress-photos/",
         PatientProgressPhotoListView.as_view(),
         name="wellness-progress-photos",
+    ),
+    path(
+        "progress-photos/<int:pk>/",
+        PatientProgressPhotoDeleteView.as_view(),
+        name="wellness-progress-photo-delete",
     ),
     path("water/", DailyWaterView.as_view(), name="wellness-water"),
     path("steps/", DailyStepView.as_view(), name="wellness-steps"),

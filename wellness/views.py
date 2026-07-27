@@ -155,6 +155,30 @@ class PatientProgressPhotoListView(APIView):
             ).data
         )
 
+    def post(self, request):
+        from accounts.admin_serializers import PatientProgressPhotoUploadSerializer
+        serializer = PatientProgressPhotoUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        photo = serializer.save(patient=request.user, uploaded_by=request.user)
+        return Response(
+            PatientProgressPhotoSerializer(photo, context={"request": request}).data,
+            status=201,
+        )
+
+
+class PatientProgressPhotoDeleteView(APIView):
+    permission_classes = [IsPatient]
+
+    def delete(self, request, pk):
+        try:
+            photo = PatientProgressPhoto.objects.get(pk=pk, patient=request.user)
+        except PatientProgressPhoto.DoesNotExist:
+            return Response(status=404)
+        if photo.image:
+            photo.image.delete(save=False)
+        photo.delete()
+        return Response(status=204)
+
 
 class DailyWaterView(APIView):
     permission_classes = [IsPatient]
