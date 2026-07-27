@@ -39,7 +39,7 @@ def _send_reminder(appointment, label):
         title="Randevu hatırlatması",
         body=f"{label} randevunuz var: {dt_label} (Dr. {doctor_name}).",
         data={
-            "link": "/hesabim/randevular",
+            "link": "/hesabim/paketler",
             "appointment_id": appointment.pk,
         },
     )

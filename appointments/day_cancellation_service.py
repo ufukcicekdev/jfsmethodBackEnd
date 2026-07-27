@@ -121,7 +121,7 @@ def _send_day_cancellation_push(grouped: dict, target_date_iso: str, reason: str
                 patient_id,
                 title=f"{date_label} dersiniz iptal edildi",
                 body=reason or "Bu tarihteki randevularınız iptal edilmiştir.",
-                data={"link": "/hesabim/randevular"},
+                data={"link": "/hesabim/paketler"},
             )
     except Exception:
         logger.exception("Gün iptali push bildirimleri gönderilemedi.")

@@ -139,7 +139,7 @@ def _push_patient_status_change(instance, new_status):
         title=title,
         body=body,
         data={
-            "link": "/hesabim/randevular",
+            "link": "/hesabim/paketler",
             "notification_type": "appointment",
             "appointment_id": instance.pk,
         },
@@ -212,7 +212,7 @@ def handle_appointment_notifications(sender, instance, created, **kwargs):
                     "klinik tarafından oluşturuldu."
                 ),
                 data={
-                    "link": "/hesabim/randevular",
+                    "link": "/hesabim/paketler",
                     "notification_type": "appointment",
                     "appointment_id": instance.pk,
                 },
