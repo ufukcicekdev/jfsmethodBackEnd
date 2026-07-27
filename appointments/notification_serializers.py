@@ -7,6 +7,7 @@ class AdminNotificationSerializer(serializers.ModelSerializer):
     link = serializers.SerializerMethodField()
     type_label = serializers.CharField(source="get_notification_type_display", read_only=True)
     actor_name = serializers.SerializerMethodField()
+    appointment_status = serializers.SerializerMethodField()
 
     class Meta:
         model = AdminNotification
@@ -19,9 +20,15 @@ class AdminNotificationSerializer(serializers.ModelSerializer):
             "link",
             "actor_name",
             "appointment_id",
+            "appointment_status",
             "is_read",
             "created_at",
         ]
+
+    def get_appointment_status(self, obj):
+        if obj.appointment_id:
+            return obj.appointment.status
+        return None
 
     def get_link(self, obj):
         if obj.appointment_id:
