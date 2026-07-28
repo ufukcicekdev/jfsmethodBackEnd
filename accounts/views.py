@@ -294,10 +294,20 @@ class OnboardingSubmitView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        from accounts.audit import log_action
         answers_data = request.data.get("answers", [])
         if not isinstance(answers_data, list):
+            log_action(
+                "onboarding_submit",
+                actor=request.user,
+                target_user=request.user,
+                request=request,
+                status="error",
+                detail={"error": "answers must be a list"},
+            )
             return Response({"detail": "answers must be a list."}, status=status.HTTP_400_BAD_REQUEST)
 
+        saved_count = 0
         for item in answers_data:
             qid = item.get("question_id")
             answer_value = item.get("answer")
@@ -310,9 +320,19 @@ class OnboardingSubmitView(APIView):
                 question=question,
                 defaults={"answer": answer_value},
             )
+            saved_count += 1
 
         profile, _ = PatientProfile.objects.get_or_create(user=request.user)
         profile.onboarding_completed = True
         profile.save(update_fields=["onboarding_completed", "updated_at"])
+
+        log_action(
+            "onboarding_submit",
+            actor=request.user,
+            target_user=request.user,
+            request=request,
+            status="success",
+            detail={"answers_saved": saved_count, "total_sent": len(answers_data)},
+        )
 
         return Response({"completed": True})
