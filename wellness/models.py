@@ -9,6 +9,11 @@ def exercise_image_path(instance, filename):
     return f"exercises/{uuid.uuid4().hex}.{ext}"
 
 
+def exercise_video_path(instance, filename):
+    ext = filename.rsplit(".", 1)[-1].lower() or "mp4"
+    return f"exercises/videos/{uuid.uuid4().hex}.{ext}"
+
+
 class BodyRegion(models.TextChoices):
     NECK = "neck", "Boyun"
     SHOULDER_LEFT = "shoulder_left", "Sol Omuz"
@@ -38,6 +43,7 @@ class Exercise(models.Model):
     title = models.CharField(max_length=120)
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to=exercise_image_path, null=True, blank=True)
+    video = models.FileField(upload_to=exercise_video_path, null=True, blank=True)
     instructions = models.TextField(
         help_text="Adım adım hareket talimatları"
     )

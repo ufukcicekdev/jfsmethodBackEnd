@@ -23,6 +23,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
         source="get_difficulty_display", read_only=True
     )
     image_url = serializers.SerializerMethodField()
+    video_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Exercise
@@ -31,6 +32,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "image_url",
+            "video_url",
             "instructions",
             "target_region",
             "target_region_label",
@@ -50,6 +52,14 @@ class ExerciseSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.image.url)
         return obj.image.url
 
+    def get_video_url(self, obj):
+        if not obj.video:
+            return None
+        request = self.context.get("request")
+        if request:
+            return request.build_absolute_uri(obj.video.url)
+        return obj.video.url
+
 
 class ExerciseWriteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -58,6 +68,7 @@ class ExerciseWriteSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "image",
+            "video",
             "instructions",
             "target_region",
             "duration_minutes",
@@ -76,6 +87,18 @@ class ExerciseWriteSerializer(serializers.ModelSerializer):
         if ext not in {"jpg", "jpeg", "png", "webp"}:
             raise serializers.ValidationError(
                 "Yalnızca JPG, PNG veya WebP dosyaları yüklenebilir."
+            )
+        return value
+
+    def validate_video(self, value):
+        if value in (None, ""):
+            return value
+        if value.size > 100 * 1024 * 1024:
+            raise serializers.ValidationError("Video dosyası en fazla 100 MB olabilir.")
+        ext = value.name.rsplit(".", 1)[-1].lower()
+        if ext not in {"mp4", "mov", "webm"}:
+            raise serializers.ValidationError(
+                "Yalnızca MP4, MOV veya WebM video dosyaları yüklenebilir."
             )
         return value
 
