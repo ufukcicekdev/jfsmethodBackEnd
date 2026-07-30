@@ -806,6 +806,7 @@ class AuditLog(models.Model):
         ("patient_create", "Öğrenci Oluşturma"),
         ("patient_delete", "Öğrenci Silme"),
         ("password_change", "Şifre Değiştirme"),
+        ("frontend_error", "Frontend Hatası"),
         ("other", "Diğer"),
     ]
 
