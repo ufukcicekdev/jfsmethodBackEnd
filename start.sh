@@ -11,5 +11,5 @@ elif [ "$ROLE" = "cron" ]; then
     exec python manage.py fire_scheduled_notifications
 else
     echo "[start.sh] ROLE=web → Web sunucusu başlatılıyor..."
-    exec gunicorn fizyotech.wsgi --bind "0.0.0.0:${PORT:-8000}" --workers 2 --timeout 120
+    exec gunicorn fizyotech.wsgi --bind "0.0.0.0:${PORT:-8000}" --workers 2 --timeout 120 --max-requests 1000 --max-requests-jitter 100
 fi
