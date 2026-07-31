@@ -108,8 +108,26 @@ class PublicBlogListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        posts = BlogPost.objects.filter(is_published=True).order_by("-published_at")
-        return Response(BlogPostListSerializer(posts, many=True, context={"request": request}).data)
+        sort = request.query_params.get("sort", "newest")
+        qs = BlogPost.objects.filter(is_published=True)
+        if sort == "popular":
+            qs = qs.order_by("-view_count")
+        else:
+            qs = qs.order_by("-published_at")
+
+        total = qs.count()
+        page_size = min(int(request.query_params.get("page_size", 12)), 50)
+        page = max(int(request.query_params.get("page", 1)), 1)
+        offset = (page - 1) * page_size
+        paged = qs[offset: offset + page_size]
+
+        popular = BlogPost.objects.filter(is_published=True).order_by("-view_count")[:5]
+
+        return Response({
+            "count": total,
+            "results": BlogPostListSerializer(paged, many=True, context={"request": request}).data,
+            "popular": BlogPostListSerializer(popular, many=True, context={"request": request}).data,
+        })
 
 
 class PublicBlogDetailView(APIView):
