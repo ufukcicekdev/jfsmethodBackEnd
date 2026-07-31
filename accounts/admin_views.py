@@ -170,8 +170,14 @@ class AdminPatientListView(APIView):
                 | Q(email__icontains=search)
             )
 
+        total = queryset.count()
+        page_size = min(int(request.query_params.get("page_size", 20)), 100)
+        page = max(int(request.query_params.get("page", 1)), 1)
+        offset = (page - 1) * page_size
+        queryset = queryset[offset: offset + page_size]
+
         serializer = AdminPatientListSerializer(queryset, many=True)
-        return Response(serializer.data)
+        return Response({"count": total, "results": serializer.data})
 
     def post(self, request):
         serializer = AdminPatientCreateSerializer(data=request.data)
@@ -1417,7 +1423,11 @@ class AdminAuditLogView(APIView):
                 Q(target_user__last_name__icontains=search)
             )
 
-        qs = qs[:500]
+        total = qs.count()
+        page_size = min(int(request.query_params.get("page_size", 25)), 100)
+        page = max(int(request.query_params.get("page", 1)), 1)
+        offset = (page - 1) * page_size
+        qs = qs[offset: offset + page_size]
 
         def fmt_user(u):
             if not u:
@@ -1439,4 +1449,4 @@ class AdminAuditLogView(APIView):
             }
             for log in qs
         ]
-        return Response(data)
+        return Response({"count": total, "results": data})
