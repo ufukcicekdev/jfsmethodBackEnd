@@ -702,7 +702,13 @@ class AdminAppointmentListView(APIView):
         if date_to:
             queryset = queryset.filter(appointment_datetime__date__lte=date_to)
 
-        return Response(AdminAppointmentSerializer(queryset, many=True).data)
+        total = queryset.count()
+        page_size = min(int(request.query_params.get("page_size", 20)), 100)
+        page = max(int(request.query_params.get("page", 1)), 1)
+        offset = (page - 1) * page_size
+        queryset = queryset[offset: offset + page_size]
+
+        return Response({"count": total, "results": AdminAppointmentSerializer(queryset, many=True).data})
 
     def post(self, request):
         from appointments.schedule_service import is_valid_appointment_slot
