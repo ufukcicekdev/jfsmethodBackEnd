@@ -133,7 +133,12 @@ class AdminBlogPostListView(APIView):
 
     def get(self, request):
         posts = BlogPost.objects.all()
-        return Response(BlogPostListSerializer(posts, many=True, context={"request": request}).data)
+        total = posts.count()
+        page_size = min(int(request.query_params.get("page_size", 20)), 100)
+        page = max(int(request.query_params.get("page", 1)), 1)
+        offset = (page - 1) * page_size
+        posts = posts[offset: offset + page_size]
+        return Response({"count": total, "results": BlogPostListSerializer(posts, many=True, context={"request": request}).data})
 
     def post(self, request):
         ser = BlogPostCreateSerializer(data=request.data)
