@@ -339,20 +339,24 @@ class OnboardingSubmitView(APIView):
 
 
 class FrontendErrorLogView(APIView):
+    authentication_classes = []
     permission_classes = []
     throttle_classes = []
 
     def post(self, request):
-        data = request.data
-        log_action(
-            "frontend_error",
-            request=request,
-            status="error",
-            detail={
-                "message": str(data.get("message", ""))[:500],
-                "stack": str(data.get("stack", ""))[:2000],
-                "url": str(data.get("url", ""))[:300],
-                "userAgent": str(data.get("userAgent", ""))[:300],
-            },
-        )
+        try:
+            data = request.data
+            log_action(
+                "frontend_error",
+                request=request,
+                status="error",
+                detail={
+                    "message": str(data.get("message", ""))[:500],
+                    "stack": str(data.get("stack", ""))[:2000],
+                    "url": str(data.get("url", ""))[:300],
+                    "userAgent": str(data.get("userAgent", ""))[:300],
+                },
+            )
+        except Exception:
+            pass
         return Response({"ok": True})
