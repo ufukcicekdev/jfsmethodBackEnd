@@ -285,9 +285,44 @@ class OnboardingQuestionsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        from .admin_serializers import PatientOnboardingQuestionSerializer
-        questions = OnboardingQuestion.objects.filter(is_active=True)
-        return Response(PatientOnboardingQuestionSerializer(questions, many=True).data)
+        from .admin_serializers import PatientOnboardingSectionSerializer, PatientOnboardingQuestionSerializer
+        from .models import OnboardingSection
+
+        # Only questions the user has NOT answered yet
+        answered_ids = set(
+            OnboardingAnswer.objects.filter(user=request.user).values_list("question_id", flat=True)
+        )
+
+        sections = OnboardingSection.objects.filter(is_active=True).prefetch_related("questions")
+
+        # Filter questions within each section to unanswered ones only
+        sections_data = []
+        for section in sections:
+            unanswered_qs = [
+                q for q in section.questions.filter(is_active=True)
+                if q.id not in answered_ids
+            ]
+            if not unanswered_qs:
+                continue
+            s_data = {
+                "id": section.id,
+                "title": section.title,
+                "description": section.description,
+                "sort_order": section.sort_order,
+                "questions": PatientOnboardingQuestionSerializer(unanswered_qs, many=True).data,
+            }
+            sections_data.append(s_data)
+
+        unassigned = [
+            q for q in OnboardingQuestion.objects.filter(is_active=True, section__isnull=True)
+            if q.id not in answered_ids
+        ]
+        unassigned_data = PatientOnboardingQuestionSerializer(unassigned, many=True).data
+
+        return Response({
+            "sections": sections_data,
+            "unassigned_questions": unassigned_data,
+        })
 
 
 class OnboardingSubmitView(APIView):

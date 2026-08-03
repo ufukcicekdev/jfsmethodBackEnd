@@ -25,6 +25,7 @@ from .admin_serializers import (
     FaqSerializer,
     OnboardingAnswerSerializer,
     OnboardingQuestionSerializer,
+    OnboardingSectionSerializer,
     PackagePlanSerializer,
     PatientProgressPhotoSerializer,
     PatientProgressPhotoUploadSerializer,
@@ -45,6 +46,7 @@ from .models import (
     Faq,
     OnboardingAnswer,
     OnboardingQuestion,
+    OnboardingSection,
     PackagePlan,
     PatientProfile,
     PatientProgressPhoto,
@@ -1301,6 +1303,48 @@ class AdminNotificationTemplateDetailView(APIView):
             return Response({"detail": "Bulunamadı."}, status=status.HTTP_404_NOT_FOUND)
         t.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminOnboardingSectionListView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        sections = OnboardingSection.objects.prefetch_related("questions").all()
+        return Response(OnboardingSectionSerializer(sections, many=True).data)
+
+    def post(self, request):
+        serializer = OnboardingSectionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminOnboardingSectionDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        try:
+            return OnboardingSection.objects.get(pk=pk)
+        except OnboardingSection.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        section = self._get(pk)
+        if not section:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        serializer = OnboardingSectionSerializer(section, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    def delete(self, request, pk):
+        section = self._get(pk)
+        if not section:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        section.delete()
+        return Response(status=204)
 
 
 class AdminOnboardingQuestionListView(APIView):

@@ -155,6 +155,22 @@ class FCMDevice(models.Model):
         return f"{self.user.username} — {self.token[:16]}…"
 
 
+class OnboardingSection(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.CharField(max_length=500, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "created_at"]
+        verbose_name = "Onboarding Bölümü"
+        verbose_name_plural = "Onboarding Bölümleri"
+
+    def __str__(self):
+        return self.title
+
+
 class OnboardingQuestion(models.Model):
     class QuestionType(models.TextChoices):
         TEXT = "text", "Açık Metin"
@@ -162,6 +178,9 @@ class OnboardingQuestion(models.Model):
         SCALE = "scale", "Skala (1-10)"
         MULTI = "multi", "Çoklu Seçim"
 
+    section = models.ForeignKey(
+        OnboardingSection, null=True, blank=True, on_delete=models.SET_NULL, related_name="questions"
+    )
     text = models.CharField(max_length=500)
     question_type = models.CharField(max_length=20, choices=QuestionType.choices, default=QuestionType.TEXT)
     options = models.JSONField(default=list, blank=True)

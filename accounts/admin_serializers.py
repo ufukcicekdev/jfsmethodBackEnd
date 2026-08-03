@@ -17,6 +17,7 @@ from .models import (
     Faq,
     OnboardingAnswer,
     OnboardingQuestion,
+    OnboardingSection,
     PackagePlan,
     PatientProfile,
     PatientProgressPhoto,
@@ -693,14 +694,31 @@ class PatientDietAssignmentSerializer(serializers.ModelSerializer):
 class OnboardingQuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = OnboardingQuestion
-        fields = ["id", "text", "question_type", "options", "is_required", "sort_order", "is_active", "created_at"]
+        fields = ["id", "section", "text", "question_type", "options", "is_required", "sort_order", "is_active", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
+class OnboardingSectionSerializer(serializers.ModelSerializer):
+    questions = OnboardingQuestionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = OnboardingSection
+        fields = ["id", "title", "description", "sort_order", "is_active", "created_at", "questions"]
         read_only_fields = ["id", "created_at"]
 
 
 class PatientOnboardingQuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = OnboardingQuestion
-        fields = ["id", "text", "question_type", "options", "is_required", "sort_order"]
+        fields = ["id", "section", "text", "question_type", "options", "is_required", "sort_order"]
+
+
+class PatientOnboardingSectionSerializer(serializers.ModelSerializer):
+    questions = PatientOnboardingQuestionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = OnboardingSection
+        fields = ["id", "title", "description", "sort_order", "questions"]
 
 
 class OnboardingAnswerSerializer(serializers.ModelSerializer):
