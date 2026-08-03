@@ -46,6 +46,11 @@ class PackagePlan(models.Model):
         verbose_name_plural = "Paket Planları"
         ordering = ["sort_order", "name"]
 
+    def save(self, *args, **kwargs):
+        from wellness.image_utils import convert_to_webp
+        convert_to_webp(self.image)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.name} ({self.total_sessions} seans)"
 
@@ -324,6 +329,11 @@ class PatientProgressPhoto(models.Model):
         verbose_name_plural = "Patient Progress Photos"
         ordering = ["-taken_at", "-created_at"]
 
+    def save(self, *args, **kwargs):
+        from wellness.image_utils import convert_to_webp
+        convert_to_webp(self.image)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.patient.username} — {self.get_category_display()} ({self.created_at:%Y-%m-%d})"
 
@@ -379,6 +389,7 @@ class SiteSettings(models.Model):
     section_why_us = models.BooleanField(default=True, verbose_name="Neden JFS")
     section_testimonials = models.BooleanField(default=True, verbose_name="Hasta Yorumları")
     section_packages = models.BooleanField(default=True, verbose_name="Paketler")
+    section_programs = models.BooleanField(default=True, verbose_name="Programlar")
     section_cta = models.BooleanField(default=True, verbose_name="CTA Banner")
     section_faq = models.BooleanField(default=True, verbose_name="SSS")
 
@@ -455,6 +466,11 @@ class PostureAssessment(models.Model):
         verbose_name_plural = "Postür Analizleri"
         ordering = ["-created_at"]
 
+    def save(self, *args, **kwargs):
+        from wellness.image_utils import convert_to_webp
+        convert_to_webp(self.image)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.patient.username} — {self.get_view_display()} ({self.created_at:%Y-%m-%d})"
 
@@ -521,6 +537,13 @@ class Faq(models.Model):
 class DietItem(models.Model):
     """Tek bir yemek/besin kalemi (kütüphane)."""
     name = models.CharField(max_length=200)
+    category = models.ForeignKey(
+        "wellness.Category",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="diet_items",
+        limit_choices_to={"category_type": "food"},
+    )
     calories = models.PositiveIntegerField(help_text="kcal")
     protein = models.DecimalField(max_digits=6, decimal_places=1, default=0, help_text="gram")
     carbs = models.DecimalField(max_digits=6, decimal_places=1, default=0, help_text="gram")

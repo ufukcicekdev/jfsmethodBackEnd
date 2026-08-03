@@ -6,7 +6,8 @@ from django.db import models
 
 class CategoryType(models.TextChoices):
     EXERCISE = "exercise", "Egzersiz"
-    DIET = "diet", "Diyet"
+    DIET = "diet", "Diyet Programı"
+    FOOD = "food", "Besin"
 
 
 class Category(models.Model):
@@ -92,6 +93,11 @@ class Exercise(models.Model):
 
     class Meta:
         ordering = ["title"]
+
+    def save(self, *args, **kwargs):
+        from wellness.image_utils import convert_to_webp
+        convert_to_webp(self.image)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
@@ -261,6 +267,11 @@ class ExerciseProgram(models.Model):
     class Meta:
         ordering = ["name"]
 
+    def save(self, *args, **kwargs):
+        from wellness.image_utils import convert_to_webp
+        convert_to_webp(self.thumbnail)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -357,6 +368,11 @@ class MealLog(models.Model):
     class Meta:
         ordering = ["-logged_at"]
 
+    def save(self, *args, **kwargs):
+        from wellness.image_utils import convert_to_webp
+        convert_to_webp(self.photo)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.user.username} — {self.get_meal_type_display()} {self.logged_at.date()}"
 
@@ -405,19 +421,28 @@ class UserNotificationSchedule(models.Model):
 
 class ProgramMealEntry(models.Model):
     MEAL_TYPES = [
-        ("breakfast", "Kahvaltı"),
-        ("lunch",     "Öğle"),
-        ("dinner",    "Akşam"),
-        ("snack",     "Ara Öğün"),
+        ("sabah",   "Kahvaltı"),
+        ("ara1",    "Ara Öğün 1"),
+        ("ogle",    "Öğle"),
+        ("ara2",    "Ara Öğün 2"),
+        ("aksam",   "Akşam"),
+        ("gece",    "Gece"),
     ]
     day = models.ForeignKey(ExerciseProgramDay, on_delete=models.CASCADE, related_name="meal_entries")
     meal_type = models.CharField(max_length=16, choices=MEAL_TYPES)
-    description = models.TextField(help_text="Öğün içeriği / tarifler")
+    diet_items = models.ManyToManyField(
+        "accounts.DietItem",
+        blank=True,
+        related_name="program_meal_entries",
+        help_text="Kütüphaneden seçilen besinler",
+    )
+    notification_time = models.TimeField(null=True, blank=True, help_text="Bildirim saati (HH:MM)")
+    description = models.TextField(blank=True, help_text="Ek notlar / serbest metin")
     calories = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Tahmini kalori (kcal)")
     sort_order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
-        ordering = ["sort_order", "meal_type"]
+        ordering = ["notification_time", "sort_order", "meal_type"]
 
     def __str__(self):
         return f"{self.day} — {self.get_meal_type_display()}"

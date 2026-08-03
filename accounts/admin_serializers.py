@@ -547,10 +547,15 @@ class FaqSerializer(serializers.ModelSerializer):
 
 
 class DietItemSerializer(serializers.ModelSerializer):
+    category_id = serializers.PrimaryKeyRelatedField(
+        source="category", queryset=__import__("wellness.models", fromlist=["Category"]).Category.objects.filter(category_type="food"),
+        allow_null=True, required=False,
+    )
+
     class Meta:
         model = DietItem
-        fields = ["id", "name", "calories", "protein", "carbs", "fat", "portion", "is_active", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        fields = ["id", "name", "category", "category_id", "calories", "protein", "carbs", "fat", "portion", "is_active", "created_at"]
+        read_only_fields = ["id", "created_at", "category"]
 
 
 class DietPlanItemSerializer(serializers.ModelSerializer):

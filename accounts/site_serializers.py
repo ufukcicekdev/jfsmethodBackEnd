@@ -28,6 +28,7 @@ _CONTACT_FIELDS = [
     "section_why_us",
     "section_testimonials",
     "section_packages",
+    "section_programs",
     "section_cta",
     "section_faq",
     "expert_visible",

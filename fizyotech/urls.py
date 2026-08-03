@@ -31,6 +31,7 @@ from accounts.views import (
 from accounts.site_views import (
     ContactMessageCreateView,
     PublicSiteSettingsView,
+    PublicProductPackagesView,
 )
 from accounts.admin_views import (
     PublicFaqListView,
@@ -85,6 +86,11 @@ urlpatterns = [
         "api/package-plans/",
         PublicPackagePlansView.as_view(),
         name="public-package-plans",
+    ),
+    path(
+        "api/product-packages/",
+        PublicProductPackagesView.as_view(),
+        name="public-product-packages",
     ),
     path(
         "api/notifications/",

@@ -99,3 +99,43 @@ class AdminContactMessageDetailView(APIView):
             return Response({"detail": "Mesaj bulunamadı."}, status=404)
         message.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PublicProductPackagesView(APIView):
+    """Anasayfa için aktif paketleri kısa bilgiyle döner (egzersiz/diyet program adı + fiyat)."""
+    permission_classes = []
+    authentication_classes = []
+
+    def get(self, request):
+        from wellness.models import ProductPackage
+        packages = (
+            ProductPackage.objects
+            .filter(is_active=True)
+            .select_related("exercise_program", "diet_program")
+            .order_by("id")
+        )
+        data = []
+        for pkg in packages:
+            ep = pkg.exercise_program
+            data.append({
+                "id": pkg.id,
+                "name": pkg.name,
+                "description": pkg.description,
+                "price": str(pkg.price) if pkg.price else None,
+                "exercise_program": {
+                    "name": ep.name,
+                    "difficulty": ep.difficulty,
+                    "duration_weeks": ep.duration_weeks,
+                    "program_type": ep.program_type,
+                    "day_count": ep.days.count(),
+                    # Sadece ilk 2 günün başlığını göster (teaser)
+                    "preview_days": [
+                        {"day_number": d.day_number, "title": d.title, "exercise_count": d.items.count()}
+                        for d in ep.days.all()[:2]
+                    ],
+                } if ep else None,
+                "diet_program": {
+                    "name": pkg.diet_program.title,
+                } if pkg.diet_program else None,
+            })
+        return Response(data)

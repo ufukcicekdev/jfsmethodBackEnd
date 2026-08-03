@@ -840,12 +840,37 @@ class AdminPatientProgramLogView(APIView):
 from .models import ProgramMealEntry
 
 
+class _DietItemMiniSerializer(drf_serializers.ModelSerializer):
+    class Meta:
+        from accounts.models import DietItem
+        model = DietItem
+        fields = ["id", "name", "calories", "protein", "carbs", "fat", "portion"]
+
+
 class ProgramMealEntrySerializer(drf_serializers.ModelSerializer):
     meal_type_label = drf_serializers.CharField(source="get_meal_type_display", read_only=True)
+    diet_items = _DietItemMiniSerializer(many=True, read_only=True)
+    diet_item_ids = drf_serializers.ListField(
+        child=drf_serializers.IntegerField(), write_only=True, required=False
+    )
 
     class Meta:
         model = ProgramMealEntry
-        fields = ["id", "meal_type", "meal_type_label", "description", "calories", "sort_order"]
+        fields = ["id", "meal_type", "meal_type_label", "diet_items", "diet_item_ids", "notification_time", "description", "calories", "sort_order"]
+
+    def create(self, validated_data):
+        ids = validated_data.pop("diet_item_ids", [])
+        obj = super().create(validated_data)
+        if ids:
+            obj.diet_items.set(ids)
+        return obj
+
+    def update(self, instance, validated_data):
+        ids = validated_data.pop("diet_item_ids", None)
+        obj = super().update(instance, validated_data)
+        if ids is not None:
+            obj.diet_items.set(ids)
+        return obj
 
 
 class AdminProgramMealEntryListView(APIView):
