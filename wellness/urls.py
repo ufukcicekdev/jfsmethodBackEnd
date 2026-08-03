@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .admin_views import (
+    AdminPatientWellnessHistoryView,
     AdminExerciseDetailView,
     AdminExerciseListView,
     AdminPatientExerciseDeactivateView,
@@ -45,6 +46,11 @@ urlpatterns = [
 
 admin_urlpatterns = [
     path("exercises/", AdminExerciseListView.as_view(), name="admin-exercises"),
+    path(
+        "patients/<int:pk>/wellness-history/",
+        AdminPatientWellnessHistoryView.as_view(),
+        name="admin-patient-wellness-history",
+    ),
     path(
         "exercises/<int:exercise_id>/",
         AdminExerciseDetailView.as_view(),

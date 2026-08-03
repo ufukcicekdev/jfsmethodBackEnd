@@ -160,6 +160,7 @@ class AdminPatientListView(APIView):
 
     def get(self, request):
         search = request.query_params.get("search", "").strip()
+        filter_param = request.query_params.get("filter", "").strip()
         queryset = patient_queryset()
 
         if search:
@@ -169,6 +170,21 @@ class AdminPatientListView(APIView):
                 | Q(last_name__icontains=search)
                 | Q(email__icontains=search)
             )
+
+        if filter_param in ("completed_today", "completed_week"):
+            from wellness.models import ExerciseCompletion
+            from django.utils import timezone
+            today = timezone.localdate()
+            if filter_param == "completed_today":
+                patient_ids = ExerciseCompletion.objects.filter(
+                    completed_at__date=today
+                ).values_list("patient_id", flat=True).distinct()
+            else:
+                week_start = today - __import__("datetime").timedelta(days=today.weekday())
+                patient_ids = ExerciseCompletion.objects.filter(
+                    completed_at__date__gte=week_start
+                ).values_list("patient_id", flat=True).distinct()
+            queryset = queryset.filter(id__in=patient_ids)
 
         total = queryset.count()
         page_size = min(int(request.query_params.get("page_size", 20)), 100)
@@ -1228,6 +1244,53 @@ class AdminSendNotificationView(APIView):
             )
 
         return Response({"sent_to": len(users)}, status=status.HTTP_200_OK)
+
+
+class AdminNotificationTemplateListView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        from .models import NotificationTemplate
+        templates = NotificationTemplate.objects.all()
+        data = [{"id": t.id, "title": t.title, "body": t.body} for t in templates]
+        return Response(data)
+
+    def post(self, request):
+        from .models import NotificationTemplate
+        title = request.data.get("title", "").strip()
+        body = request.data.get("body", "").strip()
+        if not title or not body:
+            return Response({"detail": "Başlık ve mesaj zorunludur."}, status=status.HTTP_400_BAD_REQUEST)
+        t = NotificationTemplate.objects.create(title=title, body=body)
+        return Response({"id": t.id, "title": t.title, "body": t.body}, status=status.HTTP_201_CREATED)
+
+
+class AdminNotificationTemplateDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        from .models import NotificationTemplate
+        return NotificationTemplate.objects.filter(pk=pk).first()
+
+    def put(self, request, pk):
+        t = self._get(pk)
+        if not t:
+            return Response({"detail": "Bulunamadı."}, status=status.HTTP_404_NOT_FOUND)
+        title = request.data.get("title", "").strip()
+        body = request.data.get("body", "").strip()
+        if not title or not body:
+            return Response({"detail": "Başlık ve mesaj zorunludur."}, status=status.HTTP_400_BAD_REQUEST)
+        t.title = title
+        t.body = body
+        t.save()
+        return Response({"id": t.id, "title": t.title, "body": t.body})
+
+    def delete(self, request, pk):
+        t = self._get(pk)
+        if not t:
+            return Response({"detail": "Bulunamadı."}, status=status.HTTP_404_NOT_FOUND)
+        t.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AdminOnboardingQuestionListView(APIView):

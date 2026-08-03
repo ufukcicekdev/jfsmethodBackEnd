@@ -8,6 +8,8 @@ from .admin_views import (
     AdminPatientDietAssignmentDetailView,
     AdminPatientDietAssignmentListView,
     AdminSendNotificationView,
+    AdminNotificationTemplateListView,
+    AdminNotificationTemplateDetailView,
     AdminAppointmentListView,
     AdminAppointmentStatusView,
     AdminAttendanceView,
@@ -177,6 +179,16 @@ urlpatterns = [
         "notifications/send/",
         AdminSendNotificationView.as_view(),
         name="admin-send-notification",
+    ),
+    path(
+        "notifications/templates/",
+        AdminNotificationTemplateListView.as_view(),
+        name="admin-notification-templates",
+    ),
+    path(
+        "notifications/templates/<int:pk>/",
+        AdminNotificationTemplateDetailView.as_view(),
+        name="admin-notification-template-detail",
     ),
     path(
         "notifications/",

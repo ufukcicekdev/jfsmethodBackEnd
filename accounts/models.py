@@ -838,3 +838,18 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.action} — {self.actor} — {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class NotificationTemplate(models.Model):
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Bildirim Şablonu"
+        verbose_name_plural = "Bildirim Şablonları"
+
+    def __str__(self):
+        return self.title

@@ -8,7 +8,7 @@ from accounts.permissions import IsStaff
 
 from rest_framework import serializers as drf_serializers
 
-from .models import Exercise, ExerciseAssignment, NotificationSchedule
+from .models import Exercise, ExerciseAssignment, NotificationSchedule, DailyWaterLog, DailyStepLog, ExerciseCompletion
 from .serializers import (
     ExerciseAssignSerializer,
     ExerciseAssignmentSerializer,
@@ -286,3 +286,62 @@ class AdminPatientExerciseDeactivateView(APIView):
                 assignment, context={"request": request}
             ).data
         )
+
+
+class AdminPatientWellnessHistoryView(APIView):
+    """Son 14 günlük su, adım ve egzersiz tamamlama geçmişi."""
+    permission_classes = [IsStaff]
+
+    def get(self, request, pk):
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+        import datetime
+
+        patient = User.objects.filter(pk=pk, is_staff=False).first()
+        if not patient:
+            return Response({"detail": "Bulunamadı."}, status=404)
+
+        today = timezone.localdate()
+        days = int(request.query_params.get("days", 14))
+        dates = [today - datetime.timedelta(days=i) for i in range(days - 1, -1, -1)]
+
+        water_qs = {
+            w.date: w.ml_consumed
+            for w in DailyWaterLog.objects.filter(patient=patient, date__gte=dates[0])
+        }
+        step_qs = {
+            s.date: s.step_count
+            for s in DailyStepLog.objects.filter(patient=patient, date__gte=dates[0])
+        }
+
+        from django.db.models import Count as DCount
+        completion_qs = {
+            row["date"]: row["cnt"]
+            for row in ExerciseCompletion.objects.filter(
+                patient=patient, completed_at__date__gte=dates[0]
+            ).values("date").annotate(cnt=DCount("id")).values("date", "cnt")
+        } if hasattr(ExerciseCompletion, "date") else {}
+
+        # ExerciseCompletion date field may not exist; use completed_at__date
+        from django.db.models.functions import TruncDate
+        completion_by_day = {}
+        for row in (
+            ExerciseCompletion.objects
+            .filter(patient=patient, completed_at__date__gte=dates[0])
+            .annotate(day=TruncDate("completed_at"))
+            .values("day")
+            .annotate(cnt=DCount("id"))
+        ):
+            completion_by_day[row["day"]] = row["cnt"]
+
+        history = [
+            {
+                "date": d.isoformat(),
+                "water_ml": water_qs.get(d, 0),
+                "steps": step_qs.get(d, 0),
+                "exercises_done": completion_by_day.get(d, 0),
+            }
+            for d in dates
+        ]
+
+        return Response({"history": history})

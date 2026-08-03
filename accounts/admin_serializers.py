@@ -139,6 +139,9 @@ class AdminPatientListSerializer(serializers.ModelSerializer):
     last_attended = serializers.SerializerMethodField()
     today_attendance = serializers.SerializerMethodField()
     active_packages = serializers.SerializerMethodField()
+    today_water_ml = serializers.SerializerMethodField()
+    today_steps = serializers.SerializerMethodField()
+    today_exercises_done = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -158,6 +161,9 @@ class AdminPatientListSerializer(serializers.ModelSerializer):
             "last_attended",
             "today_attendance",
             "active_packages",
+            "today_water_ml",
+            "today_steps",
+            "today_exercises_done",
         ]
 
     def get_full_name(self, obj):
@@ -217,6 +223,26 @@ class AdminPatientListSerializer(serializers.ModelSerializer):
                 label = base
             rows.append({"id": p.id, "name": label, "remaining": p.remaining_sessions})
         return rows
+
+    def get_today_water_ml(self, obj):
+        from django.utils import timezone
+        from wellness.models import DailyWaterLog
+        today = timezone.localdate()
+        log = DailyWaterLog.objects.filter(patient=obj, date=today).first()
+        return log.ml_consumed if log else 0
+
+    def get_today_steps(self, obj):
+        from django.utils import timezone
+        from wellness.models import DailyStepLog
+        today = timezone.localdate()
+        log = DailyStepLog.objects.filter(patient=obj, date=today).first()
+        return log.step_count if log else 0
+
+    def get_today_exercises_done(self, obj):
+        from django.utils import timezone
+        from wellness.models import ExerciseCompletion
+        today = timezone.localdate()
+        return ExerciseCompletion.objects.filter(patient=obj, completed_at__date=today).count()
 
 
 class AdminPatientDetailSerializer(AdminPatientListSerializer):
