@@ -1619,6 +1619,41 @@ class AdminUserListCreateView(APIView):
         first_name = data.get("first_name", "").strip()
         last_name = data.get("last_name", "").strip()
         allowed_sections = data.get("allowed_sections", [])
+        promote_existing = data.get("promote_existing", False)
+
+        # Aynı e-posta ile kayıtlı kullanıcı var mı?
+        if email:
+            existing_by_email = User.objects.filter(email=email).first()
+            if existing_by_email:
+                if existing_by_email.is_staff:
+                    return Response(
+                        {"detail": "Bu e-posta adresi zaten bir admin kullanıcıya ait."},
+                        status=400,
+                    )
+                if not promote_existing:
+                    # Frontend'e "mevcut öğrenciyi terfi ettirmek ister misiniz?" sinyali gönder
+                    return Response(
+                        {
+                            "detail": "conflict_existing_student",
+                            "existing_user": {
+                                "id": existing_by_email.id,
+                                "username": existing_by_email.username,
+                                "full_name": existing_by_email.get_full_name() or existing_by_email.username,
+                                "email": existing_by_email.email,
+                            },
+                        },
+                        status=409,
+                    )
+                # promote_existing=True → mevcut öğrenciyi admin yap
+                user = existing_by_email
+                user.is_staff = True
+                if password:
+                    user.set_password(password)
+                user.save()
+                profile, _ = AdminProfile.objects.get_or_create(user=user)
+                profile.allowed_sections = allowed_sections
+                profile.save()
+                return Response({**self._serialize(user), "promoted": True}, status=200)
 
         if not username or not password:
             return Response({"detail": "Kullanıcı adı ve şifre zorunludur."}, status=400)
