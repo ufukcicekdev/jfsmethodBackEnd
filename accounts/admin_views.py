@@ -171,18 +171,28 @@ class AdminPatientListView(APIView):
                 | Q(email__icontains=search)
             )
 
-        if filter_param in ("completed_today", "completed_week"):
+        if filter_param in ("completed_today", "completed_week", "completed_date"):
             from wellness.models import ExerciseCompletion
             from django.utils import timezone
+            import datetime
             today = timezone.localdate()
             if filter_param == "completed_today":
                 patient_ids = ExerciseCompletion.objects.filter(
                     completed_at__date=today
                 ).values_list("patient_id", flat=True).distinct()
-            else:
-                week_start = today - __import__("datetime").timedelta(days=today.weekday())
+            elif filter_param == "completed_week":
+                week_start = today - datetime.timedelta(days=today.weekday())
                 patient_ids = ExerciseCompletion.objects.filter(
                     completed_at__date__gte=week_start
+                ).values_list("patient_id", flat=True).distinct()
+            elif filter_param == "completed_date":
+                date_str = request.query_params.get("date", "")
+                try:
+                    target_date = datetime.date.fromisoformat(date_str)
+                except ValueError:
+                    target_date = today
+                patient_ids = ExerciseCompletion.objects.filter(
+                    completed_at__date=target_date
                 ).values_list("patient_id", flat=True).distinct()
             queryset = queryset.filter(id__in=patient_ids)
 
