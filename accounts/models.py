@@ -911,3 +911,55 @@ class NotificationTemplate(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class AdminProfile(models.Model):
+    """Staff kullanıcıların panel bölüm izinlerini tutar.
+
+    Superuser tüm bölümlere erişir; diğer staff kullanıcılar yalnızca
+    allowed_sections listesindeki bölümleri görebilir.
+    """
+
+    ALL_SECTIONS = [
+        ("ogrenciler",          "Öğrenciler"),
+        ("randevular",          "Randevular"),
+        ("takvim",              "Takvim"),
+        ("calisma-programi",    "Çalışma Programı"),
+        ("egzersizler",         "Egzersizler"),
+        ("programlar",          "Programlar"),
+        ("paketler",            "Paketler"),
+        ("mesajlar",            "Mesajlar"),
+        ("diyet",               "Diyet"),
+        ("blog",                "Blog"),
+        ("bildirim-gonder",     "Bildirim Gönder"),
+        ("bildirim-zamanlama",  "Bildirim Zamanlama"),
+        ("sistem-loglari",      "Sistem Logları"),
+        ("ayarlar",             "Ayarlar"),
+        ("kullanici-yonetimi",  "Kullanıcı Yönetimi"),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="admin_profile",
+    )
+    allowed_sections = models.JSONField(
+        default=list,
+        help_text="İzin verilen panel bölümlerinin slug listesi. Boş = tüm bölümler.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Admin Profili"
+        verbose_name_plural = "Admin Profilleri"
+
+    def __str__(self):
+        return f"{self.user.username} — admin profili"
+
+    def has_section(self, slug: str) -> bool:
+        if self.user.is_superuser:
+            return True
+        if not self.allowed_sections:
+            return True
+        return slug in self.allowed_sections

@@ -2,6 +2,7 @@ from django.urls import path
 
 from .report_views import AdminPatientReportView, AdminAllPatientsReportView
 from .admin_views import AdminPackageAttendanceHistoryView, AdminImpersonateView, AdminAuditLogView
+from .admin_views import AdminUserListCreateView, AdminUserDetailView, AdminSectionsView
 from .admin_views import (
     AdminDietProgramDetailView,
     AdminDietProgramListView,
@@ -260,5 +261,8 @@ urlpatterns = [
     path("onboarding/questions/", AdminOnboardingQuestionListView.as_view(), name="admin-onboarding-questions"),
     path("onboarding/questions/<int:pk>/", AdminOnboardingQuestionDetailView.as_view(), name="admin-onboarding-question-detail"),
     path("patients/<int:pk>/onboarding/", AdminPatientOnboardingAnswersView.as_view(), name="admin-patient-onboarding"),
+    path("admin-users/", AdminUserListCreateView.as_view(), name="admin-user-list"),
+    path("admin-users/<int:pk>/", AdminUserDetailView.as_view(), name="admin-user-detail"),
+    path("admin-sections/", AdminSectionsView.as_view(), name="admin-sections"),
     *wellness_admin_urls,
 ]

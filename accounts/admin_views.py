@@ -36,6 +36,7 @@ from .admin_serializers import (
     WeightHistorySerializer,
 )
 from .models import (
+    AdminProfile,
     AttendanceRecord,
     BodyMeasurement,
     DietItem,
@@ -1578,3 +1579,143 @@ class AdminAuditLogView(APIView):
             for log in qs
         ]
         return Response({"count": total, "results": data})
+
+
+# ── Admin User Management ──────────────────────────────────────────────────────
+
+class AdminUserListCreateView(APIView):
+    """Superuser: admin kullanıcıları listele ve yeni admin ekle."""
+    permission_classes = [IsStaff]
+
+    def _require_superuser(self, request):
+        if not request.user.is_superuser:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Bu işlem için superuser yetkisi gereklidir.")
+
+    def _serialize(self, user):
+        profile, _ = AdminProfile.objects.get_or_create(user=user)
+        return {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "is_superuser": user.is_superuser,
+            "is_active": user.is_active,
+            "date_joined": user.date_joined.strftime("%Y-%m-%d %H:%M"),
+            "allowed_sections": profile.allowed_sections,
+        }
+
+    def get(self, request):
+        users = User.objects.filter(is_staff=True).order_by("username")
+        return Response([self._serialize(u) for u in users])
+
+    def post(self, request):
+        self._require_superuser(request)
+        data = request.data
+        username = data.get("username", "").strip()
+        email = data.get("email", "").strip()
+        password = data.get("password", "").strip()
+        first_name = data.get("first_name", "").strip()
+        last_name = data.get("last_name", "").strip()
+        allowed_sections = data.get("allowed_sections", [])
+
+        if not username or not password:
+            return Response({"detail": "Kullanıcı adı ve şifre zorunludur."}, status=400)
+        if User.objects.filter(username=username).exists():
+            return Response({"detail": "Bu kullanıcı adı zaten kullanılıyor."}, status=400)
+
+        user = User.objects.create_user(
+            username=username, email=email, password=password,
+            first_name=first_name, last_name=last_name,
+            is_staff=True, is_active=True,
+        )
+        profile, _ = AdminProfile.objects.get_or_create(user=user)
+        profile.allowed_sections = allowed_sections
+        profile.save()
+        return Response(self._serialize(user), status=201)
+
+
+class AdminUserDetailView(APIView):
+    """Superuser: admin kullanıcısını güncelle veya sil."""
+    permission_classes = [IsStaff]
+
+    def _require_superuser(self, request):
+        if not request.user.is_superuser:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Bu işlem için superuser yetkisi gereklidir.")
+
+    def _get_user(self, pk):
+        try:
+            return User.objects.get(pk=pk, is_staff=True)
+        except User.DoesNotExist:
+            return None
+
+    def _serialize(self, user):
+        profile, _ = AdminProfile.objects.get_or_create(user=user)
+        return {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "is_superuser": user.is_superuser,
+            "is_active": user.is_active,
+            "date_joined": user.date_joined.strftime("%Y-%m-%d %H:%M"),
+            "allowed_sections": profile.allowed_sections,
+        }
+
+    def patch(self, request, pk):
+        self._require_superuser(request)
+        user = self._get_user(pk)
+        if not user:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        if user.is_superuser and not request.user.is_superuser:
+            return Response({"detail": "Superuser düzenlenemez."}, status=403)
+
+        data = request.data
+        if "first_name" in data:
+            user.first_name = data["first_name"]
+        if "last_name" in data:
+            user.last_name = data["last_name"]
+        if "email" in data:
+            user.email = data["email"]
+        if "is_active" in data:
+            user.is_active = data["is_active"]
+        if "password" in data and data["password"]:
+            user.set_password(data["password"])
+        user.save()
+
+        if "allowed_sections" in data:
+            profile, _ = AdminProfile.objects.get_or_create(user=user)
+            profile.allowed_sections = data["allowed_sections"]
+            profile.save()
+
+        return Response(self._serialize(user))
+
+    def delete(self, request, pk):
+        self._require_superuser(request)
+        user = self._get_user(pk)
+        if not user:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        if user.id == request.user.id:
+            return Response({"detail": "Kendinizi silemezsiniz."}, status=400)
+        if user.is_superuser:
+            return Response({"detail": "Superuser silinemez."}, status=403)
+        user.delete()
+        return Response(status=204)
+
+
+class AdminSectionsView(APIView):
+    """Giriş yapan admin kullanıcının izin verilen bölüm listesini döner."""
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        if request.user.is_superuser:
+            # Superuser tüm bölümlere erişir
+            return Response({"is_superuser": True, "allowed_sections": []})
+        profile, _ = AdminProfile.objects.get_or_create(user=request.user)
+        return Response({
+            "is_superuser": False,
+            "allowed_sections": profile.allowed_sections,
+        })
