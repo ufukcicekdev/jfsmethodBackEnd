@@ -388,7 +388,7 @@ class AdminCategoryTreeView(APIView):
         if not name:
             return Response({"error": "name zorunlu"}, status=400)
         cat_type = data.get("category_type")
-        if cat_type not in (CategoryType.EXERCISE, CategoryType.DIET):
+        if cat_type not in (CategoryType.EXERCISE, CategoryType.DIET, CategoryType.FOOD):
             return Response({"error": "category_type geçersiz"}, status=400)
         parent_id = data.get("parent") or None
         parent = None
