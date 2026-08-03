@@ -29,6 +29,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
         model = Exercise
         fields = [
             "id",
+            "category",
             "title",
             "description",
             "image_url",
@@ -65,6 +66,7 @@ class ExerciseWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Exercise
         fields = [
+            "category",
             "title",
             "description",
             "image",

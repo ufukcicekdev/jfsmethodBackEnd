@@ -626,7 +626,7 @@ class DietProgramSerializer(serializers.ModelSerializer):
     class Meta:
         model = DietProgram
         fields = [
-            "id", "title", "goals", "feeding_notes", "duration_days",
+            "id", "category", "title", "goals", "feeding_notes", "duration_days",
             "is_active", "created_at", "created_by_name", "assignment_count", "days",
         ]
         read_only_fields = ["id", "created_at"]

@@ -577,6 +577,9 @@ class DietPlanItem(models.Model):
 
 class DietProgram(models.Model):
     """Yeniden kullanılabilir global beslenme programı şablonu."""
+    category = models.ForeignKey(
+        "wellness.Category", null=True, blank=True, on_delete=models.SET_NULL, related_name="diet_programs"
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="created_diet_programs"
     )

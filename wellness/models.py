@@ -4,6 +4,30 @@ from django.conf import settings
 from django.db import models
 
 
+class CategoryType(models.TextChoices):
+    EXERCISE = "exercise", "Egzersiz"
+    DIET = "diet", "Diyet"
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=120)
+    category_type = models.CharField(max_length=16, choices=CategoryType.choices)
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.CASCADE, related_name="children"
+    )
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "name"]
+        verbose_name = "Kategori"
+        verbose_name_plural = "Kategoriler"
+
+    def __str__(self):
+        return self.name
+
+
 def exercise_image_path(instance, filename):
     ext = filename.rsplit(".", 1)[-1].lower() or "jpg"
     return f"exercises/{uuid.uuid4().hex}.{ext}"
@@ -40,6 +64,9 @@ class ExerciseFrequency(models.TextChoices):
 
 
 class Exercise(models.Model):
+    category = models.ForeignKey(
+        Category, null=True, blank=True, on_delete=models.SET_NULL, related_name="exercises"
+    )
     title = models.CharField(max_length=120)
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to=exercise_image_path, null=True, blank=True)

@@ -8,7 +8,7 @@ from accounts.permissions import IsStaff
 
 from rest_framework import serializers as drf_serializers
 
-from .models import Exercise, ExerciseAssignment, NotificationSchedule, DailyWaterLog, DailyStepLog, ExerciseCompletion
+from .models import Category, CategoryType, Exercise, ExerciseAssignment, NotificationSchedule, DailyWaterLog, DailyStepLog, ExerciseCompletion
 from .serializers import (
     ExerciseAssignSerializer,
     ExerciseAssignmentSerializer,
@@ -141,8 +141,12 @@ class AdminExerciseListView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
-        # Kütüphane yönetimi için tüm egzersizler (aktif + pasif) döner.
         exercises = Exercise.objects.all().order_by("title")
+        cat_id = request.query_params.get("category")
+        if cat_id == "none":
+            exercises = exercises.filter(category__isnull=True)
+        elif cat_id:
+            exercises = exercises.filter(category_id=cat_id)
         return Response(
             ExerciseSerializer(
                 exercises, many=True, context={"request": request}
@@ -345,3 +349,92 @@ class AdminPatientWellnessHistoryView(APIView):
         ]
 
         return Response({"history": history})
+
+
+# ─── Category ────────────────────────────────────────────────────────────────
+
+def _build_tree(categories, parent_id=None):
+    result = []
+    for cat in categories:
+        pid = cat.parent_id
+        if pid == parent_id:
+            node = {
+                "id": cat.id,
+                "name": cat.name,
+                "category_type": cat.category_type,
+                "sort_order": cat.sort_order,
+                "is_active": cat.is_active,
+                "parent": pid,
+                "children": _build_tree(categories, parent_id=cat.id),
+            }
+            result.append(node)
+    return result
+
+
+class AdminCategoryTreeView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        cat_type = request.query_params.get("type")
+        qs = Category.objects.all()
+        if cat_type:
+            qs = qs.filter(category_type=cat_type)
+        cats = list(qs)
+        return Response(_build_tree(cats))
+
+    def post(self, request):
+        data = request.data
+        name = (data.get("name") or "").strip()
+        if not name:
+            return Response({"error": "name zorunlu"}, status=400)
+        cat_type = data.get("category_type")
+        if cat_type not in (CategoryType.EXERCISE, CategoryType.DIET):
+            return Response({"error": "category_type geçersiz"}, status=400)
+        parent_id = data.get("parent") or None
+        parent = None
+        if parent_id:
+            try:
+                parent = Category.objects.get(pk=parent_id)
+            except Category.DoesNotExist:
+                return Response({"error": "parent bulunamadı"}, status=404)
+        cat = Category.objects.create(
+            name=name,
+            category_type=cat_type,
+            parent=parent,
+            sort_order=data.get("sort_order", 0),
+        )
+        return Response({"id": cat.id, "name": cat.name, "category_type": cat.category_type, "parent": cat.parent_id, "sort_order": cat.sort_order, "is_active": cat.is_active, "children": []}, status=201)
+
+
+class AdminCategoryDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        try:
+            return Category.objects.get(pk=pk)
+        except Category.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        cat = self._get(pk)
+        if not cat:
+            return Response(status=404)
+        data = request.data
+        if "name" in data:
+            cat.name = data["name"].strip()
+        if "sort_order" in data:
+            cat.sort_order = data["sort_order"]
+        if "is_active" in data:
+            cat.is_active = data["is_active"]
+        if "parent" in data:
+            parent_id = data["parent"]
+            cat.parent_id = parent_id
+        cat.save()
+        return Response({"id": cat.id, "name": cat.name, "category_type": cat.category_type, "parent": cat.parent_id, "sort_order": cat.sort_order, "is_active": cat.is_active})
+
+    def delete(self, request, pk):
+        cat = self._get(pk)
+        if not cat:
+            return Response(status=404)
+        cat.delete()
+        return Response(status=204)

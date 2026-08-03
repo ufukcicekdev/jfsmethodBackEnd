@@ -2,6 +2,8 @@ from django.urls import path
 
 from .admin_views import (
     AdminPatientWellnessHistoryView,
+    AdminCategoryTreeView,
+    AdminCategoryDetailView,
     AdminExerciseDetailView,
     AdminExerciseListView,
     AdminPatientExerciseDeactivateView,
@@ -45,6 +47,8 @@ urlpatterns = [
 ]
 
 admin_urlpatterns = [
+    path("categories/", AdminCategoryTreeView.as_view(), name="admin-categories"),
+    path("categories/<int:pk>/", AdminCategoryDetailView.as_view(), name="admin-category-detail"),
     path("exercises/", AdminExerciseListView.as_view(), name="admin-exercises"),
     path(
         "patients/<int:pk>/wellness-history/",

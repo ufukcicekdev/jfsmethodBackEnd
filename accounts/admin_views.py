@@ -1363,6 +1363,11 @@ class AdminDietProgramListView(APIView):
 
     def get(self, request):
         programs = DietProgram.objects.prefetch_related("days__meals__items__diet_item", "assignments")
+        cat_id = request.query_params.get("category")
+        if cat_id == "none":
+            programs = programs.filter(category__isnull=True)
+        elif cat_id:
+            programs = programs.filter(category_id=cat_id)
         return Response(DietProgramSerializer(programs, many=True).data)
 
     def post(self, request):
