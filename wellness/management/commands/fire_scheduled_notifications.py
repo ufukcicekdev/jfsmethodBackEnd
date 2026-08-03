@@ -153,3 +153,85 @@ class Command(BaseCommand):
 
         if fired == 0 and not dry_run and not force_id:
             self.stdout.write("Bu çalışmada gönderilecek schedule bulunamadı.")
+
+        # ── Per-user package notifications ────────────────────────────────────
+        self._fire_user_schedules(now, today, dry_run)
+
+    def _fire_user_schedules(self, now, today, dry_run):
+        from wellness.models import UserNotificationSchedule, ProgramExerciseLog
+        from accounts.push_service import send_push_to_users
+        from accounts.models import FCMDevice
+
+        today_str = str(today)
+        window = timedelta(minutes=10)
+
+        active_device_user_ids = set(
+            FCMDevice.objects.filter(is_active=True).values_list("user_id", flat=True)
+        )
+
+        schedules = (
+            UserNotificationSchedule.objects
+            .filter(is_enabled=True, user__in=active_device_user_ids)
+            .select_related("user", "package_assignment__package__exercise_program")
+        )
+
+        for schedule in schedules:
+            # Gün filtresi (boş = her gün)
+            if schedule.days_of_week and today.weekday() not in schedule.days_of_week:
+                continue
+
+            for send_time_str in (schedule.send_times or []):
+                try:
+                    h, m = map(int, send_time_str.split(":"))
+                    from datetime import datetime
+                    scheduled_dt = timezone.make_aware(
+                        datetime.combine(today, datetime.min.time().replace(hour=h, minute=m))
+                    )
+                except (ValueError, AttributeError):
+                    continue
+
+                if abs((now - scheduled_dt).total_seconds()) > window.total_seconds():
+                    continue
+
+                # Egzersiz bildirimi — bugün zaten tamamladıysa gönderme
+                if schedule.notification_type == "exercise":
+                    pkg = getattr(schedule.package_assignment, "package", None) if schedule.package_assignment else None
+                    program = getattr(pkg, "exercise_program", None) if pkg else None
+                    if program:
+                        done_today = ProgramExerciseLog.objects.filter(
+                            user=schedule.user,
+                            completed_at__date=today,
+                            program_item__day__program=program,
+                        ).exists()
+                        if done_today:
+                            continue
+
+                # Öğün bildirimi — bu saatte bugün zaten log girdiyse gönderme
+                if schedule.notification_type == "meal":
+                    from wellness.models import MealLog
+                    already_logged = MealLog.objects.filter(
+                        user=schedule.user,
+                        logged_at__date=today,
+                        logged_at__hour=h,
+                    ).exists()
+                    if already_logged:
+                        continue
+
+                link_map = {
+                    "meal": "/hesabim/ogunler",
+                    "exercise": "/hesabim/programim",
+                }
+                link = link_map.get(schedule.notification_type, "/hesabim")
+
+                if dry_run:
+                    self.stdout.write(
+                        f"[DRY-RUN] UserSchedule #{schedule.id} ({schedule.user.username}) "
+                        f"saat {send_time_str} → {schedule.notification_type}"
+                    )
+                else:
+                    send_push_to_users(
+                        [schedule.user],
+                        title=schedule.title,
+                        body=schedule.message,
+                        data={"link": link, "notification_type": schedule.notification_type},
+                    )

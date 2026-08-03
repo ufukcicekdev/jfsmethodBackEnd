@@ -438,3 +438,392 @@ class AdminCategoryDetailView(APIView):
             return Response(status=404)
         cat.delete()
         return Response(status=204)
+
+
+# ── Exercise Programs ─────────────────────────────────────────────────────────
+
+from .models import ExerciseProgram, ExerciseProgramDay, ExerciseProgramItem, ProductPackage, UserPackageAssignment
+
+
+class ExerciseProgramItemSerializer(drf_serializers.ModelSerializer):
+    exercise_title = drf_serializers.CharField(source="exercise.title", read_only=True)
+
+    class Meta:
+        model = ExerciseProgramItem
+        fields = ["id", "exercise", "exercise_title", "sets", "reps", "duration_seconds", "rest_seconds", "note", "sort_order"]
+
+
+class ExerciseProgramDaySerializer(drf_serializers.ModelSerializer):
+    items = ExerciseProgramItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ExerciseProgramDay
+        fields = ["id", "day_number", "title", "sort_order", "items"]
+
+
+class ExerciseProgramSerializer(drf_serializers.ModelSerializer):
+    days = ExerciseProgramDaySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ExerciseProgram
+        fields = ["id", "name", "description", "program_type", "difficulty", "duration_weeks", "category", "is_active", "created_at", "days"]
+
+
+class AdminExerciseProgramListView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        qs = ExerciseProgram.objects.prefetch_related("days__items__exercise").all()
+        return Response(ExerciseProgramSerializer(qs, many=True).data)
+
+    def post(self, request):
+        s = ExerciseProgramSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        s.save()
+        return Response(s.data, status=201)
+
+
+class AdminExerciseProgramDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        try:
+            return ExerciseProgram.objects.prefetch_related("days__items__exercise").get(pk=pk)
+        except ExerciseProgram.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        return Response(ExerciseProgramSerializer(obj).data)
+
+    def patch(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        s = ExerciseProgramSerializer(obj, data=request.data, partial=True)
+        s.is_valid(raise_exception=True)
+        s.save()
+        return Response(s.data)
+
+    def delete(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        obj.delete()
+        return Response(status=204)
+
+
+class AdminProgramDayListView(APIView):
+    permission_classes = [IsStaff]
+
+    def post(self, request, program_pk):
+        try:
+            program = ExerciseProgram.objects.get(pk=program_pk)
+        except ExerciseProgram.DoesNotExist:
+            return Response(status=404)
+        data = {**request.data, "program": program.id}
+        s = ExerciseProgramDaySerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        s.save(program=program)
+        return Response(s.data, status=201)
+
+
+class AdminProgramDayDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        try:
+            return ExerciseProgramDay.objects.prefetch_related("items__exercise").get(pk=pk)
+        except ExerciseProgramDay.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        s = ExerciseProgramDaySerializer(obj, data=request.data, partial=True)
+        s.is_valid(raise_exception=True)
+        s.save()
+        return Response(s.data)
+
+    def delete(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        obj.delete()
+        return Response(status=204)
+
+
+class AdminProgramItemListView(APIView):
+    permission_classes = [IsStaff]
+
+    def post(self, request, day_pk):
+        try:
+            day = ExerciseProgramDay.objects.get(pk=day_pk)
+        except ExerciseProgramDay.DoesNotExist:
+            return Response(status=404)
+        s = ExerciseProgramItemSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        s.save(day=day)
+        return Response(s.data, status=201)
+
+
+class AdminProgramItemDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        try:
+            return ExerciseProgramItem.objects.get(pk=pk)
+        except ExerciseProgramItem.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        s = ExerciseProgramItemSerializer(obj, data=request.data, partial=True)
+        s.is_valid(raise_exception=True)
+        s.save()
+        return Response(s.data)
+
+    def delete(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        obj.delete()
+        return Response(status=204)
+
+
+# ── Product Packages ──────────────────────────────────────────────────────────
+
+class ProductPackageSerializer(drf_serializers.ModelSerializer):
+    exercise_program_name = drf_serializers.CharField(source="exercise_program.name", read_only=True)
+    diet_program_name = drf_serializers.CharField(source="diet_program.name", read_only=True)
+
+    class Meta:
+        model = ProductPackage
+        fields = ["id", "name", "description", "exercise_program", "exercise_program_name", "diet_program", "diet_program_name", "price", "is_active", "created_at"]
+
+
+class AdminProductPackageListView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        qs = ProductPackage.objects.select_related("exercise_program", "diet_program").all()
+        return Response(ProductPackageSerializer(qs, many=True).data)
+
+    def post(self, request):
+        s = ProductPackageSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        s.save()
+        return Response(s.data, status=201)
+
+
+class AdminProductPackageDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        try:
+            return ProductPackage.objects.select_related("exercise_program", "diet_program").get(pk=pk)
+        except ProductPackage.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        s = ProductPackageSerializer(obj, data=request.data, partial=True)
+        s.is_valid(raise_exception=True)
+        s.save()
+        return Response(s.data)
+
+    def delete(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        obj.delete()
+        return Response(status=204)
+
+
+class UserPackageAssignmentSerializer(drf_serializers.ModelSerializer):
+    package_name = drf_serializers.CharField(source="package.name", read_only=True)
+    user_name = drf_serializers.SerializerMethodField()
+
+    def get_user_name(self, obj):
+        return obj.user.get_full_name() or obj.user.username
+
+    class Meta:
+        model = UserPackageAssignment
+        fields = ["id", "user", "user_name", "package", "package_name", "assigned_at", "is_active", "notes"]
+
+
+class AdminPackageAssignmentListView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        qs = UserPackageAssignment.objects.select_related("user", "package").all()
+        return Response(UserPackageAssignmentSerializer(qs, many=True).data)
+
+    def post(self, request):
+        s = UserPackageAssignmentSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        s.save(assigned_by=request.user)
+        return Response(s.data, status=201)
+
+
+class AdminPackageAssignmentDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        try:
+            return UserPackageAssignment.objects.select_related("user", "package").get(pk=pk)
+        except UserPackageAssignment.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        s = UserPackageAssignmentSerializer(obj, data=request.data, partial=True)
+        s.is_valid(raise_exception=True)
+        s.save()
+        return Response(s.data)
+
+    def delete(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        obj.delete()
+        return Response(status=204)
+
+
+# ── Admin: Meal Logs ──────────────────────────────────────────────────────────
+
+from .models import MealLog, UserNotificationSchedule, ProgramExerciseLog
+
+
+class AdminMealLogSerializer(drf_serializers.ModelSerializer):
+    photo_url = drf_serializers.SerializerMethodField()
+    meal_type_label = drf_serializers.CharField(source="get_meal_type_display", read_only=True)
+    user_name = drf_serializers.SerializerMethodField()
+
+    def get_photo_url(self, obj):
+        request = self.context.get("request")
+        if obj.photo and request:
+            return request.build_absolute_uri(obj.photo.url)
+        return None
+
+    def get_user_name(self, obj):
+        return obj.user.get_full_name() or obj.user.username
+
+    class Meta:
+        model = MealLog
+        fields = ["id", "user", "user_name", "meal_type", "meal_type_label", "description", "photo_url", "logged_at", "admin_note", "admin_note_at", "created_at"]
+
+
+class AdminPatientMealLogListView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request, patient_id):
+        from django.utils.dateparse import parse_date
+        qs = MealLog.objects.filter(user_id=patient_id).order_by("-logged_at")
+        date_str = request.query_params.get("date")
+        if date_str:
+            d = parse_date(date_str)
+            if d:
+                qs = qs.filter(logged_at__date=d)
+        return Response(AdminMealLogSerializer(qs, many=True, context={"request": request}).data)
+
+    def patch(self, request, patient_id, log_id=None):
+        """Admin notu ekle."""
+        if not log_id:
+            return Response(status=400)
+        try:
+            log = MealLog.objects.get(pk=log_id, user_id=patient_id)
+        except MealLog.DoesNotExist:
+            return Response(status=404)
+        from django.utils import timezone as tz
+        log.admin_note = request.data.get("admin_note", log.admin_note)
+        log.admin_note_by = request.user
+        log.admin_note_at = tz.now()
+        log.save(update_fields=["admin_note", "admin_note_by", "admin_note_at"])
+        return Response(AdminMealLogSerializer(log, context={"request": request}).data)
+
+
+# ── Admin: User Notification Schedules ───────────────────────────────────────
+
+class UserNotifScheduleSerializer(drf_serializers.ModelSerializer):
+    user_name = drf_serializers.SerializerMethodField()
+
+    def get_user_name(self, obj):
+        return obj.user.get_full_name() or obj.user.username
+
+    class Meta:
+        model = UserNotificationSchedule
+        fields = ["id", "user", "user_name", "notification_type", "title", "message", "send_times", "days_of_week", "is_enabled", "created_at"]
+
+
+class AdminUserNotifScheduleListView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request, patient_id):
+        qs = UserNotificationSchedule.objects.filter(user_id=patient_id)
+        return Response(UserNotifScheduleSerializer(qs, many=True).data)
+
+    def post(self, request, patient_id):
+        data = {**request.data, "user": patient_id}
+        s = UserNotifScheduleSerializer(data=data)
+        s.is_valid(raise_exception=True)
+        s.save()
+        return Response(s.data, status=201)
+
+
+class AdminUserNotifScheduleDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def patch(self, request, patient_id, pk):
+        try:
+            obj = UserNotificationSchedule.objects.get(pk=pk, user_id=patient_id)
+        except UserNotificationSchedule.DoesNotExist:
+            return Response(status=404)
+        s = UserNotifScheduleSerializer(obj, data=request.data, partial=True)
+        s.is_valid(raise_exception=True)
+        s.save()
+        return Response(s.data)
+
+    def delete(self, request, patient_id, pk):
+        try:
+            obj = UserNotificationSchedule.objects.get(pk=pk, user_id=patient_id)
+        except UserNotificationSchedule.DoesNotExist:
+            return Response(status=404)
+        obj.delete()
+        return Response(status=204)
+
+
+# ── Admin: Program Exercise Logs ──────────────────────────────────────────────
+
+class AdminPatientProgramLogView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request, patient_id):
+        qs = (
+            ProgramExerciseLog.objects
+            .filter(user_id=patient_id)
+            .select_related("program_item__exercise", "program_item__day__program")
+            .order_by("-completed_at")[:100]
+        )
+        data = [
+            {
+                "id": log.id,
+                "exercise_title": log.program_item.exercise.title,
+                "program_name": log.program_item.day.program.name,
+                "day_number": log.program_item.day.day_number,
+                "completed_at": log.completed_at,
+                "difficulty_felt": log.difficulty_felt,
+                "note": log.note,
+            }
+            for log in qs
+        ]
+        return Response(data)

@@ -239,3 +239,165 @@ class ExerciseCompletion(models.Model):
 
     def __str__(self):
         return f"{self.patient.username} completed {self.assignment.exercise.title}"
+
+
+class ProgramType(models.TextChoices):
+    WEEKLY = "weekly", "Haftalık Plan"
+    SEQUENTIAL = "sequential", "Sıralı Günler"
+
+
+class ExerciseProgram(models.Model):
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    program_type = models.CharField(max_length=16, choices=ProgramType.choices, default=ProgramType.WEEKLY)
+    difficulty = models.CharField(max_length=16, choices=ExerciseDifficulty.choices, default=ExerciseDifficulty.EASY)
+    duration_weeks = models.PositiveSmallIntegerField(default=4, help_text="Tahmini süre (hafta)")
+    category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.SET_NULL, related_name="exercise_programs")
+    thumbnail = models.ImageField(upload_to="program_thumbnails/", null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class ExerciseProgramDay(models.Model):
+    program = models.ForeignKey(ExerciseProgram, on_delete=models.CASCADE, related_name="days")
+    # weekly → 0=Pzt, 1=Sal, ..., 6=Paz | sequential → 1,2,3...
+    day_number = models.PositiveSmallIntegerField()
+    title = models.CharField(max_length=200, blank=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "day_number"]
+        unique_together = [("program", "day_number")]
+
+    def __str__(self):
+        return f"{self.program.name} — Gün {self.day_number}"
+
+
+class ExerciseProgramItem(models.Model):
+    day = models.ForeignKey(ExerciseProgramDay, on_delete=models.CASCADE, related_name="items")
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name="program_items")
+    sets = models.PositiveSmallIntegerField(default=3)
+    reps = models.PositiveSmallIntegerField(null=True, blank=True)
+    duration_seconds = models.PositiveSmallIntegerField(null=True, blank=True)
+    rest_seconds = models.PositiveSmallIntegerField(default=60)
+    note = models.CharField(max_length=255, blank=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order"]
+
+    def __str__(self):
+        return f"{self.day} — {self.exercise.title}"
+
+
+class ProductPackage(models.Model):
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    exercise_program = models.ForeignKey(ExerciseProgram, null=True, blank=True, on_delete=models.SET_NULL, related_name="packages")
+    diet_program = models.ForeignKey("accounts.DietProgram", null=True, blank=True, on_delete=models.SET_NULL, related_name="packages")
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Bilgi amaçlı fiyat etiketi")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class UserPackageAssignment(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="package_assignments")
+    package = models.ForeignKey(ProductPackage, on_delete=models.CASCADE, related_name="assignments")
+    assigned_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="assigned_packages")
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    notes = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ["-assigned_at"]
+        unique_together = [("user", "package")]
+
+    def __str__(self):
+        return f"{self.user.username} → {self.package.name}"
+
+
+# ── Meal Tracking ─────────────────────────────────────────────────────────────
+
+def meal_photo_path(instance, filename):
+    ext = filename.rsplit(".", 1)[-1]
+    return f"meal_photos/{instance.user_id}/{uuid.uuid4()}.{ext}"
+
+
+class MealType(models.TextChoices):
+    BREAKFAST = "breakfast", "Kahvaltı"
+    LUNCH = "lunch", "Öğle"
+    DINNER = "dinner", "Akşam"
+    SNACK = "snack", "Ara Öğün"
+
+
+class MealLog(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="meal_logs")
+    meal_type = models.CharField(max_length=16, choices=MealType.choices)
+    description = models.TextField(blank=True)
+    photo = models.ImageField(upload_to=meal_photo_path, null=True, blank=True)
+    logged_at = models.DateTimeField()
+    admin_note = models.TextField(blank=True)
+    admin_note_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="meal_notes")
+    admin_note_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-logged_at"]
+
+    def __str__(self):
+        return f"{self.user.username} — {self.get_meal_type_display()} {self.logged_at.date()}"
+
+
+# ── Program Exercise Log ──────────────────────────────────────────────────────
+
+class ProgramExerciseLog(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="program_exercise_logs")
+    program_item = models.ForeignKey(ExerciseProgramItem, on_delete=models.CASCADE, related_name="logs")
+    # Which day-cycle this belongs to (for sequential: iteration number, for weekly: ISO week number)
+    cycle = models.PositiveSmallIntegerField(default=1, help_text="Hafta/döngü numarası")
+    completed_at = models.DateTimeField(auto_now_add=True)
+    note = models.CharField(max_length=500, blank=True)
+    difficulty_felt = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Kullanıcının hissettiği zorluk (1-5)")
+
+    class Meta:
+        ordering = ["-completed_at"]
+
+    def __str__(self):
+        return f"{self.user.username} — {self.program_item.exercise.title} ({self.completed_at.date()})"
+
+
+# ── Per-User Notification Schedule (package-based) ────────────────────────────
+
+class UserNotificationSchedule(models.Model):
+    TYPE_CHOICES = [
+        ("meal",     "Öğün Hatırlatması"),
+        ("exercise", "Egzersiz Hatırlatması"),
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notification_schedules")
+    package_assignment = models.ForeignKey(UserPackageAssignment, null=True, blank=True, on_delete=models.SET_NULL, related_name="notification_schedules")
+    notification_type = models.CharField(max_length=16, choices=TYPE_CHOICES)
+    title = models.CharField(max_length=120)
+    message = models.TextField()
+    send_times = models.JSONField(default=list, help_text='["HH:MM", ...]')
+    days_of_week = models.JSONField(default=list, help_text="[0-6], boş = her gün")
+    is_enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["notification_type", "user"]
+
+    def __str__(self):
+        return f"{self.user.username} — {self.get_notification_type_display()}"

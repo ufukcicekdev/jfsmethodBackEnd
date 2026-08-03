@@ -6,4 +6,4 @@ class WellnessConfig(AppConfig):
     name = "wellness"
 
     def ready(self):
-        pass
+        import wellness.signals  # noqa: F401
