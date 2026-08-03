@@ -41,10 +41,11 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "cancellation_reason",
             "created_at",
             "updated_at",
+            "is_private",
             "kvkk_accepted",
             "acik_riza_accepted",
         ]
-        read_only_fields = ["id", "patient", "status", "created_at", "updated_at"]
+        read_only_fields = ["id", "patient", "status", "is_private", "created_at", "updated_at"]
 
     def get_doctor_name(self, obj):
         return obj.doctor.get_full_name() or obj.doctor.username
