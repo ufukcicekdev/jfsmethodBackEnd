@@ -66,13 +66,18 @@ def get_booked_counts(target_date):
     rows = Appointment.objects.filter(
         appointment_datetime__date=target_date,
         status__in=[AppointmentStatus.PENDING, AppointmentStatus.APPROVED],
-    ).values_list("doctor_id", "appointment_datetime")
-    for doctor_id, dt in rows:
-        counts[(doctor_id, dt)] = counts.get((doctor_id, dt), 0) + 1
+    ).values_list("doctor_id", "appointment_datetime", "is_private")
+    for doctor_id, dt, is_private in rows:
+        key = (doctor_id, dt)
+        prev = counts.get(key, {"count": 0, "has_private": False})
+        counts[key] = {
+            "count": prev["count"] + 1,
+            "has_private": prev["has_private"] or is_private,
+        }
     return counts
 
 
-def get_available_slots(target_date):
+def get_available_slots(target_date, for_private: bool = False):
     doctors = User.objects.filter(is_staff=True, is_active=True)
     if not doctors.exists():
         return []
@@ -94,15 +99,21 @@ def get_available_slots(target_date):
             slot_time = timezone.localtime(slot_dt).time()
             if is_slot_blocked(slot_time, blocked_ranges):
                 continue
-            booked = counts.get((doctor.id, slot_dt), 0)
-            if booked >= capacity:
+            info = counts.get((doctor.id, slot_dt), {"count": 0, "has_private": False})
+            # Slotta özel ders varsa → tamamen kapalı
+            if info["has_private"]:
+                continue
+            # Özel ders alacak biri → slot tamamen boş olmalı
+            if for_private and info["count"] > 0:
+                continue
+            if info["count"] >= capacity:
                 continue
             slots.append(
                 {
                     "datetime": slot_dt,
                     "doctor_id": doctor.id,
                     "doctor_name": doctor.get_full_name() or doctor.username,
-                    "remaining": capacity - booked,
+                    "remaining": capacity - info["count"],
                 }
             )
 
@@ -110,7 +121,8 @@ def get_available_slots(target_date):
 
 
 def is_valid_appointment_slot(
-    appointment_datetime, doctor_id: int, exclude_appointment_id: int | None = None
+    appointment_datetime, doctor_id: int, exclude_appointment_id: int | None = None,
+    is_private: bool = False,
 ) -> bool:
     if appointment_datetime <= timezone.now():
         return False
@@ -154,6 +166,14 @@ def is_valid_appointment_slot(
     )
     if exclude_appointment_id:
         booked_query = booked_query.exclude(pk=exclude_appointment_id)
+
+    # Slotta özel ders varsa → kimse alamaz
+    if booked_query.filter(is_private=True).exists():
+        return False
+
+    # Yeni randevu özel ders ise → slot tamamen boş olmalı
+    if is_private and booked_query.exists():
+        return False
 
     capacity = ClinicScheduleSettings.get_solo().slot_capacity or 1
     return booked_query.count() < capacity

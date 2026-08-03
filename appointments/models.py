@@ -207,6 +207,10 @@ class Appointment(models.Model):
         blank=True,
         help_text="Reason when appointment is cancelled (e.g. day cancellation)",
     )
+    is_private = models.BooleanField(
+        default=False,
+        help_text="Özel ders randevusu — slotu tamamen kilitler",
+    )
     ical_uid = models.CharField(max_length=100, unique=True, blank=True)
     reminder_24h_sent = models.BooleanField(default=False)
     reminder_1h_sent = models.BooleanField(default=False)

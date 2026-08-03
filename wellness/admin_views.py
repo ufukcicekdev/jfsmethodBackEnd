@@ -610,7 +610,7 @@ class ProductPackageSerializer(drf_serializers.ModelSerializer):
 
     class Meta:
         model = ProductPackage
-        fields = ["id", "name", "description", "exercise_program", "exercise_program_name", "diet_program", "diet_program_name", "price", "is_active", "created_at"]
+        fields = ["id", "name", "description", "session_type", "exercise_program", "exercise_program_name", "diet_program", "diet_program_name", "price", "is_active", "created_at"]
 
 
 class AdminProductPackageListView(APIView):

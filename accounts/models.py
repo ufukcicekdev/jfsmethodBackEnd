@@ -90,6 +90,14 @@ class SessionPackage(models.Model):
     purchased_at = models.DateField()
     note = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    product_package = models.ForeignKey(
+        "wellness.ProductPackage",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="session_packages",
+        help_text="Bu paketin bağlı olduğu ürün paketi (grup/özel ders tipi buradan alınır)",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

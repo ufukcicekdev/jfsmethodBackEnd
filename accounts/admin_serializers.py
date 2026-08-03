@@ -67,6 +67,7 @@ class SessionPackageSerializer(serializers.ModelSerializer):
     remaining_sessions = serializers.IntegerField(read_only=True)
     created_by_name = serializers.SerializerMethodField()
     plan_name = serializers.SerializerMethodField()
+    product_package_name = serializers.SerializerMethodField()
 
     class Meta:
         model = SessionPackage
@@ -74,6 +75,8 @@ class SessionPackageSerializer(serializers.ModelSerializer):
             "id",
             "plan",
             "plan_name",
+            "product_package",
+            "product_package_name",
             "name",
             "total_sessions",
             "historical_sessions",
@@ -99,6 +102,9 @@ class SessionPackageSerializer(serializers.ModelSerializer):
 
     def get_plan_name(self, obj):
         return obj.plan.name if obj.plan else None
+
+    def get_product_package_name(self, obj):
+        return obj.product_package.name if obj.product_package else None
 
 
 class SessionPackageCreateSerializer(serializers.Serializer):

@@ -309,8 +309,13 @@ class ExerciseProgramItem(models.Model):
 
 
 class ProductPackage(models.Model):
+    SESSION_TYPES = [
+        ("group",   "Grup Dersi"),
+        ("private", "Özel Ders"),
+    ]
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    session_type = models.CharField(max_length=16, choices=SESSION_TYPES, default="group")
     exercise_program = models.ForeignKey(ExerciseProgram, null=True, blank=True, on_delete=models.SET_NULL, related_name="packages")
     diet_program = models.ForeignKey("accounts.DietProgram", null=True, blank=True, on_delete=models.SET_NULL, related_name="packages")
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Bilgi amaçlı fiyat etiketi")

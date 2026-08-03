@@ -33,11 +33,24 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
         return Appointment.objects.filter(patient=user).select_related("doctor")
 
     def perform_create(self, serializer):
-        appointment = serializer.save()
+        user = self.request.user
+        # Kullanıcının aktif paketinin session_type'ına göre is_private belirle
+        is_private = False
+        try:
+            from accounts.models import SessionPackage
+            active_pkg = SessionPackage.objects.filter(
+                patient=user, is_active=True, product_package__isnull=False
+            ).select_related("product_package").first()
+            if active_pkg and active_pkg.product_package.session_type == "private":
+                is_private = True
+        except Exception:
+            pass
+        appointment = serializer.save(is_private=is_private)
         from accounts.audit import log_action
-        log_action("appointment_create", actor=self.request.user, request=self.request,
+        log_action("appointment_create", actor=user, request=self.request,
                    detail={"appointment_id": appointment.id,
-                           "datetime": str(appointment.appointment_datetime)})
+                           "datetime": str(appointment.appointment_datetime),
+                           "is_private": is_private})
 
 
 class AppointmentDetailView(generics.RetrieveAPIView):
@@ -165,7 +178,20 @@ class AvailableSlotsView(APIView):
         else:
             target_date = timezone.localdate()
 
-        slots = get_available_slots(target_date)
+        # İsteği yapan kullanıcı özel ders paketine sahipse sadece boş slotları göster
+        for_private = False
+        if not request.user.is_staff:
+            try:
+                from accounts.models import SessionPackage
+                active_pkg = SessionPackage.objects.filter(
+                    patient=request.user, is_active=True, product_package__isnull=False
+                ).select_related("product_package").first()
+                if active_pkg and active_pkg.product_package.session_type == "private":
+                    for_private = True
+            except Exception:
+                pass
+
+        slots = get_available_slots(target_date, for_private=for_private)
         serializer = AvailableSlotSerializer(slots, many=True)
         return Response(serializer.data)
 

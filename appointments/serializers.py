@@ -112,7 +112,20 @@ class AppointmentSerializer(serializers.ModelSerializer):
             appointment_datetime = attrs.get("appointment_datetime")
             doctor = attrs.get("doctor")
             if appointment_datetime and doctor:
-                if not is_valid_appointment_slot(appointment_datetime, doctor.id):
+                # Kullanıcının özel ders paketi var mı?
+                booking_is_private = False
+                try:
+                    from accounts.models import SessionPackage
+                    request = self.context.get("request")
+                    if request and request.user.is_authenticated:
+                        active_pkg = SessionPackage.objects.filter(
+                            patient=request.user, is_active=True, product_package__isnull=False
+                        ).select_related("product_package").first()
+                        if active_pkg and active_pkg.product_package.session_type == "private":
+                            booking_is_private = True
+                except Exception:
+                    pass
+                if not is_valid_appointment_slot(appointment_datetime, doctor.id, is_private=booking_is_private):
                     raise serializers.ValidationError(
                         {
                             "appointment_datetime": (
