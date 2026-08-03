@@ -31,7 +31,13 @@ class PackagePlan(models.Model):
     geçmiş etkilenmez.
     """
 
+    SESSION_TYPES = [
+        ("group",   "Grup Dersi"),
+        ("private", "Özel Ders"),
+    ]
+
     name = models.CharField(max_length=120)
+    session_type = models.CharField(max_length=16, choices=SESSION_TYPES, default="group")
     total_sessions = models.PositiveIntegerField(default=12)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     description = models.TextField(blank=True)
@@ -90,14 +96,6 @@ class SessionPackage(models.Model):
     purchased_at = models.DateField()
     note = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
-    product_package = models.ForeignKey(
-        "wellness.ProductPackage",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="session_packages",
-        help_text="Bu paketin bağlı olduğu ürün paketi (grup/özel ders tipi buradan alınır)",
-    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -119,6 +117,13 @@ class SessionPackage(models.Model):
     def __str__(self):
         label = self.name or f"{self.total_sessions} seanslık paket"
         return f"{self.patient.username} — {label}"
+
+    @property
+    def session_type(self):
+        """Paketin ders türü — plan'dan gelir, plan yoksa grup varsayılan."""
+        if self.plan_id:
+            return self.plan.session_type
+        return "group"
 
     def _count(self, status):
         return self.appointments.filter(status=status).count()

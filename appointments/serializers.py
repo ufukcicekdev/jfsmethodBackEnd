@@ -119,9 +119,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
                     request = self.context.get("request")
                     if request and request.user.is_authenticated:
                         active_pkg = SessionPackage.objects.filter(
-                            patient=request.user, is_active=True, product_package__isnull=False
-                        ).select_related("product_package").first()
-                        if active_pkg and active_pkg.product_package.session_type == "private":
+                            patient=request.user, is_active=True
+                        ).select_related("plan").first()
+                        if active_pkg and active_pkg.session_type == "private":
                             booking_is_private = True
                 except Exception:
                     pass

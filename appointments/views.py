@@ -39,9 +39,9 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
         try:
             from accounts.models import SessionPackage
             active_pkg = SessionPackage.objects.filter(
-                patient=user, is_active=True, product_package__isnull=False
-            ).select_related("product_package").first()
-            if active_pkg and active_pkg.product_package.session_type == "private":
+                patient=user, is_active=True
+            ).select_related("plan").first()
+            if active_pkg and active_pkg.session_type == "private":
                 is_private = True
         except Exception:
             pass
@@ -184,9 +184,9 @@ class AvailableSlotsView(APIView):
             try:
                 from accounts.models import SessionPackage
                 active_pkg = SessionPackage.objects.filter(
-                    patient=request.user, is_active=True, product_package__isnull=False
-                ).select_related("product_package").first()
-                if active_pkg and active_pkg.product_package.session_type == "private":
+                    patient=request.user, is_active=True
+                ).select_related("plan").first()
+                if active_pkg and active_pkg.session_type == "private":
                     for_private = True
             except Exception:
                 pass
