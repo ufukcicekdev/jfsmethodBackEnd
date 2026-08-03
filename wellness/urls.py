@@ -1,6 +1,8 @@
 from django.urls import path
 
 from .admin_views import (
+    AdminProgramMealEntryListView,
+    AdminProgramMealEntryDetailView,
     AdminPatientWellnessHistoryView,
     AdminCategoryTreeView,
     AdminCategoryDetailView,
@@ -114,6 +116,8 @@ admin_urlpatterns = [
     path("program-days/<int:pk>/", AdminProgramDayDetailView.as_view(), name="admin-program-day-detail"),
     path("program-days/<int:day_pk>/items/", AdminProgramItemListView.as_view(), name="admin-program-items"),
     path("program-items/<int:pk>/", AdminProgramItemDetailView.as_view(), name="admin-program-item-detail"),
+    path("program-days/<int:day_pk>/meals/", AdminProgramMealEntryListView.as_view(), name="admin-program-meals"),
+    path("program-meals/<int:pk>/", AdminProgramMealEntryDetailView.as_view(), name="admin-program-meal-detail"),
     # Patient tracking (admin view)
     path("patients/<int:patient_id>/meal-logs/", AdminPatientMealLogListView.as_view(), name="admin-patient-meal-logs"),
     path("patients/<int:patient_id>/meal-logs/<int:log_id>/", AdminPatientMealLogListView.as_view(), name="admin-patient-meal-log-note"),

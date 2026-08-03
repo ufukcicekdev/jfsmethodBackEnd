@@ -455,10 +455,16 @@ class ExerciseProgramItemSerializer(drf_serializers.ModelSerializer):
 
 class ExerciseProgramDaySerializer(drf_serializers.ModelSerializer):
     items = ExerciseProgramItemSerializer(many=True, read_only=True)
+    meal_entries = drf_serializers.SerializerMethodField()
+
+    def get_meal_entries(self, obj):
+        from .models import ProgramMealEntry
+        qs = ProgramMealEntry.objects.filter(day=obj)
+        return ProgramMealEntrySerializer(qs, many=True).data
 
     class Meta:
         model = ExerciseProgramDay
-        fields = ["id", "day_number", "title", "sort_order", "items"]
+        fields = ["id", "day_number", "title", "sort_order", "items", "meal_entries"]
 
 
 class ExerciseProgramSerializer(drf_serializers.ModelSerializer):
@@ -827,3 +833,56 @@ class AdminPatientProgramLogView(APIView):
             for log in qs
         ]
         return Response(data)
+
+
+# ── Program Meal Entries ──────────────────────────────────────────────────────
+
+from .models import ProgramMealEntry
+
+
+class ProgramMealEntrySerializer(drf_serializers.ModelSerializer):
+    meal_type_label = drf_serializers.CharField(source="get_meal_type_display", read_only=True)
+
+    class Meta:
+        model = ProgramMealEntry
+        fields = ["id", "meal_type", "meal_type_label", "description", "calories", "sort_order"]
+
+
+class AdminProgramMealEntryListView(APIView):
+    permission_classes = [IsStaff]
+
+    def post(self, request, day_pk):
+        try:
+            day = ExerciseProgramDay.objects.get(pk=day_pk)
+        except ExerciseProgramDay.DoesNotExist:
+            return Response(status=404)
+        s = ProgramMealEntrySerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        s.save(day=day)
+        return Response(s.data, status=201)
+
+
+class AdminProgramMealEntryDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        try:
+            return ProgramMealEntry.objects.get(pk=pk)
+        except ProgramMealEntry.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        s = ProgramMealEntrySerializer(obj, data=request.data, partial=True)
+        s.is_valid(raise_exception=True)
+        s.save()
+        return Response(s.data)
+
+    def delete(self, request, pk):
+        obj = self._get(pk)
+        if not obj:
+            return Response(status=404)
+        obj.delete()
+        return Response(status=204)

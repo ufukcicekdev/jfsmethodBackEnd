@@ -401,3 +401,23 @@ class UserNotificationSchedule(models.Model):
 
     def __str__(self):
         return f"{self.user.username} — {self.get_notification_type_display()}"
+
+
+class ProgramMealEntry(models.Model):
+    MEAL_TYPES = [
+        ("breakfast", "Kahvaltı"),
+        ("lunch",     "Öğle"),
+        ("dinner",    "Akşam"),
+        ("snack",     "Ara Öğün"),
+    ]
+    day = models.ForeignKey(ExerciseProgramDay, on_delete=models.CASCADE, related_name="meal_entries")
+    meal_type = models.CharField(max_length=16, choices=MEAL_TYPES)
+    description = models.TextField(help_text="Öğün içeriği / tarifler")
+    calories = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Tahmini kalori (kcal)")
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "meal_type"]
+
+    def __str__(self):
+        return f"{self.day} — {self.get_meal_type_display()}"
