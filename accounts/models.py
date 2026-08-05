@@ -138,8 +138,10 @@ class SessionPackage(models.Model):
 
     @property
     def scheduled_count(self):
+        from django.utils import timezone
         return self.appointments.filter(
-            status__in=["pending", "approved"]
+            status__in=["pending", "approved"],
+            appointment_datetime__gte=timezone.now(),
         ).count()
 
     @property
