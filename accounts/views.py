@@ -129,6 +129,22 @@ class MyPenaltiesView(APIView):
         return Response(list(records))
 
 
+class MyAttendanceHistoryView(APIView):
+    """Hastanın tüm devam geçmişini döner (geldi + gelmedi)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .models import AttendanceRecord
+
+        records = (
+            AttendanceRecord.objects.filter(patient=request.user)
+            .order_by("-date")
+            .values("date", "status", "note")
+        )
+        return Response(list(records))
+
+
 class PatientBodyMeasurementListView(APIView):
     """Hastanın kendi vücut ölçümlerini listeler."""
 
@@ -153,6 +169,10 @@ class FCMDeviceRegisterView(APIView):
                 {"detail": "token alanı zorunludur."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        origin = request.META.get("HTTP_ORIGIN") or request.META.get("HTTP_REFERER", "")
+        if "localhost" in origin or "127.0.0.1" in origin:
+            return Response({"detail": "Geliştirme ortamı — cihaz kaydedilmedi."}, status=status.HTTP_200_OK)
 
         user_agent = request.META.get("HTTP_USER_AGENT", "")[:255]
 

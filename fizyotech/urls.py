@@ -18,6 +18,7 @@ from accounts.views import (
     FrontendErrorLogView,
     MeView,
     MyPackagesView,
+    MyAttendanceHistoryView,
     MyPenaltiesView,
     OnboardingQuestionsView,
     OnboardingSubmitView,
@@ -82,6 +83,7 @@ urlpatterns = [
     ),
     path("api/packages/me/", MyPackagesView.as_view(), name="my-packages"),
     path("api/packages/penalties/", MyPenaltiesView.as_view(), name="my-penalties"),
+    path("api/packages/attendance-history/", MyAttendanceHistoryView.as_view(), name="my-attendance-history"),
     path(
         "api/package-plans/",
         PublicPackagePlansView.as_view(),
