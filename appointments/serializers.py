@@ -96,10 +96,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
                             )
                         }
                     )
-                available = (
-                    active_package.remaining_sessions
-                    - active_package.scheduled_count
-                )
+                available = active_package.remaining_sessions
                 if available <= 0:
                     raise serializers.ValidationError(
                         {

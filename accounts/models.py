@@ -144,7 +144,7 @@ class SessionPackage(models.Model):
 
     @property
     def remaining_sessions(self):
-        return max(0, self.total_sessions - self.used_sessions)
+        return max(0, self.total_sessions - self.used_sessions - self.scheduled_count)
 
 
 class FCMDevice(models.Model):
