@@ -407,6 +407,16 @@ class AdminPatientUpdateSerializer(serializers.Serializer):
     phone = serializers.CharField(required=False, allow_blank=True, max_length=20)
     admin_notes = serializers.CharField(required=False, allow_blank=True)
 
+    def validate_email(self, value):
+        from django.contrib.auth.models import User
+        current_user = self.context.get("user")
+        qs = User.objects.filter(email__iexact=value)
+        if current_user:
+            qs = qs.exclude(pk=current_user.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Bu e-posta adresi zaten kullanılıyor.")
+        return value
+
 
 class AdminPatientCreateSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150)
@@ -416,6 +426,12 @@ class AdminPatientCreateSerializer(serializers.Serializer):
     password = serializers.CharField(
         required=False, allow_blank=True, min_length=6, max_length=128
     )
+
+    def validate_email(self, value):
+        from django.contrib.auth.models import User
+        if value and User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("Bu e-posta adresi zaten kullanılıyor.")
+        return value
 
 
 class AdminAppointmentCreateSerializer(serializers.Serializer):

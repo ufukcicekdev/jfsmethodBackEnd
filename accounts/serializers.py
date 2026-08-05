@@ -78,6 +78,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {"email": {"required": True}}
 
+    def validate_email(self, value):
+        if value and User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                "Bu e-posta adresi zaten kullanılıyor."
+            )
+        return value
+
     def validate(self, attrs):
         if not attrs.get("kvkk_accepted"):
             raise serializers.ValidationError(

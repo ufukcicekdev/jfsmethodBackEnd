@@ -302,7 +302,7 @@ class AdminPatientDetailView(APIView):
         if not patient:
             return Response({"detail": "Öğrenci bulunamadı."}, status=404)
 
-        serializer = AdminPatientUpdateSerializer(data=request.data, partial=True)
+        serializer = AdminPatientUpdateSerializer(data=request.data, partial=True, context={"user": patient})
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
@@ -330,6 +330,13 @@ class AdminPatientDetailView(APIView):
         return Response(
             AdminPatientDetailSerializer(patient, context={"request": request}).data
         )
+
+    def delete(self, request, pk):
+        patient = self.get_patient(pk)
+        if not patient:
+            return Response({"detail": "Öğrenci bulunamadı."}, status=404)
+        patient.delete()
+        return Response(status=204)
 
 
 class AdminPatientSetPasswordView(APIView):
@@ -1709,6 +1716,9 @@ class AdminUserDetailView(APIView):
             return Response({"detail": "Superuser düzenlenemez."}, status=403)
 
         data = request.data
+        if "email" in data and data["email"] and data["email"] != user.email:
+            if User.objects.filter(email__iexact=data["email"]).exclude(pk=user.pk).exists():
+                return Response({"detail": "Bu e-posta adresi zaten kullanılıyor."}, status=400)
         if "first_name" in data:
             user.first_name = data["first_name"]
         if "last_name" in data:
