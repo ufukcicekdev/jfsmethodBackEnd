@@ -109,7 +109,10 @@ class PublicBlogListView(APIView):
 
     def get(self, request):
         sort = request.query_params.get("sort", "newest")
-        qs = BlogPost.objects.filter(is_published=True)
+        category_slug = request.query_params.get("category", "")
+        qs = BlogPost.objects.filter(is_published=True).select_related("category")
+        if category_slug:
+            qs = qs.filter(category__slug=category_slug, category__is_active=True)
         if sort == "popular":
             qs = qs.order_by("-view_count")
         else:
@@ -198,6 +201,63 @@ class AdminBlogPostDetailView(APIView):
             return Response({"detail": "Bulunamadı."}, status=404)
         post.delete()
         return Response(status=204)
+
+
+class AdminBlogCategoryListView(APIView):
+    permission_classes = [IsStaff]
+
+    def get(self, request):
+        from .models import BlogCategory
+        from .serializers import BlogCategorySerializer
+        cats = BlogCategory.objects.all()
+        return Response(BlogCategorySerializer(cats, many=True).data)
+
+    def post(self, request):
+        from .serializers import BlogCategorySerializer
+        ser = BlogCategorySerializer(data=request.data)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data, status=201)
+        return Response(ser.errors, status=400)
+
+
+class AdminBlogCategoryDetailView(APIView):
+    permission_classes = [IsStaff]
+
+    def _get(self, pk):
+        from .models import BlogCategory
+        try:
+            return BlogCategory.objects.get(pk=pk)
+        except BlogCategory.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        from .serializers import BlogCategorySerializer
+        cat = self._get(pk)
+        if not cat:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        ser = BlogCategorySerializer(cat, data=request.data, partial=True)
+        if ser.is_valid():
+            ser.save()
+            return Response(ser.data)
+        return Response(ser.errors, status=400)
+
+    def delete(self, request, pk):
+        cat = self._get(pk)
+        if not cat:
+            return Response({"detail": "Bulunamadı."}, status=404)
+        cat.delete()
+        return Response(status=204)
+
+
+class PublicBlogCategoryListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from .models import BlogCategory
+        from .serializers import BlogCategorySerializer
+        cats = BlogCategory.objects.filter(is_active=True)
+        return Response(BlogCategorySerializer(cats, many=True).data)
 
 
 class AdminBlogTopicListView(APIView):

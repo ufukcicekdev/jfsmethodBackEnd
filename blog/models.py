@@ -11,6 +11,34 @@ def slugify_tr(text):
     return text
 
 
+class BlogCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Kategori Adı")
+    slug = models.SlugField(max_length=120, unique=True, blank=True)
+    description = models.CharField(max_length=300, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Blog Kategorisi"
+        verbose_name_plural = "Blog Kategorileri"
+        ordering = ["sort_order", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify_tr(self.name)
+            slug = base
+            n = 1
+            while BlogCategory.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{n}"
+                n += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+
 class BlogTopic(models.Model):
     topic = models.CharField(max_length=255, verbose_name="Konu")
     scheduled_date = models.DateField(verbose_name="Yayın Tarihi")
@@ -33,6 +61,7 @@ class BlogPost(models.Model):
     cover_image = models.ImageField(upload_to="blog/", blank=True, null=True)
     is_published = models.BooleanField(default=False, verbose_name="Yayında")
     ai_generated = models.BooleanField(default=False, verbose_name="AI Tarafından Oluşturuldu")
+    category = models.ForeignKey(BlogCategory, null=True, blank=True, on_delete=models.SET_NULL, related_name="posts", verbose_name="Kategori")
     topic = models.ForeignKey(BlogTopic, null=True, blank=True, on_delete=models.SET_NULL)
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
