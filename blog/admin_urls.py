@@ -6,6 +6,8 @@ from .views import (
     AdminBlogTopicDetailView,
     AdminBlogGenerateView,
     AdminBlogImageUploadView,
+    AdminBlogCategoryListView,
+    AdminBlogCategoryDetailView,
 )
 
 urlpatterns = [
@@ -15,4 +17,6 @@ urlpatterns = [
     path("topics/<int:pk>/", AdminBlogTopicDetailView.as_view(), name="admin-blog-topic-detail"),
     path("generate/", AdminBlogGenerateView.as_view(), name="admin-blog-generate"),
     path("upload-image/", AdminBlogImageUploadView.as_view(), name="admin-blog-image-upload"),
+    path("categories/", AdminBlogCategoryListView.as_view(), name="admin-blog-categories"),
+    path("categories/<int:pk>/", AdminBlogCategoryDetailView.as_view(), name="admin-blog-category-detail"),
 ]
