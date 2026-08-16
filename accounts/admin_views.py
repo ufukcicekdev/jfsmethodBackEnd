@@ -55,7 +55,7 @@ from .models import (
     SessionPackage,
     WeightHistory,
 )
-from .permissions import IsStaff
+from .permissions import IsStaff, HasSection
 
 
 def patient_queryset():
@@ -67,7 +67,7 @@ def patient_queryset():
 
 
 class AdminDashboardView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request):
         from datetime import timedelta
@@ -159,7 +159,7 @@ class AdminDashboardView(APIView):
 
 
 class AdminPatientListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request):
         search = request.query_params.get("search", "").strip()
@@ -283,7 +283,7 @@ class AdminPatientListView(APIView):
 
 
 class AdminPatientDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get_patient(self, pk):
         try:
@@ -340,7 +340,7 @@ class AdminPatientDetailView(APIView):
 
 
 class AdminPatientSetPasswordView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def post(self, request, pk):
         try:
@@ -364,7 +364,7 @@ class AdminPatientSetPasswordView(APIView):
 
 
 class AdminPatientWeightView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def post(self, request, pk):
         try:
@@ -396,7 +396,7 @@ class AdminPatientWeightView(APIView):
 
 
 class AdminPatientPhotoListCreateView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_patient(self, pk):
@@ -435,7 +435,7 @@ class AdminPatientPhotoListCreateView(APIView):
 
 
 class AdminPatientPhotoDeleteView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def delete(self, request, pk, photo_id):
         try:
@@ -450,7 +450,7 @@ class AdminPatientPhotoDeleteView(APIView):
 
 
 class AdminPatientPostureListCreateView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_patient(self, pk):
@@ -502,7 +502,7 @@ class AdminPatientPostureListCreateView(APIView):
 
 
 class AdminPatientPostureDeleteView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def delete(self, request, pk, assessment_id):
         try:
@@ -519,7 +519,7 @@ class AdminPatientPostureDeleteView(APIView):
 
 
 class AdminPatientPackageListCreateView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get_patient(self, pk):
         try:
@@ -596,7 +596,7 @@ class AdminPatientPackageListCreateView(APIView):
 
 
 class AdminPatientPackageDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get_object(self, pk, package_id):
         try:
@@ -650,7 +650,7 @@ class AdminPatientPackageDetailView(APIView):
 
 
 class AdminPackageAttendanceHistoryView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request, pk, package_id):
         from accounts.models import AttendanceRecord
@@ -681,7 +681,7 @@ class AdminPackageAttendanceHistoryView(APIView):
 
 
 class AdminPackagePlanListCreateView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("paketler")]
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
@@ -696,7 +696,7 @@ class AdminPackagePlanListCreateView(APIView):
 
 
 class AdminPackagePlanDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("paketler")]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_object(self, plan_id):
@@ -723,7 +723,7 @@ class AdminPackagePlanDetailView(APIView):
 
 
 class AdminAppointmentListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("randevular")]
 
     def get(self, request):
         status_filter = request.query_params.get("status")
@@ -801,7 +801,7 @@ class AdminAppointmentListView(APIView):
 
 
 class AdminBodyMeasurementListCreateView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request, patient_id):
         measurements = BodyMeasurement.objects.filter(patient_id=patient_id)
@@ -828,7 +828,7 @@ class AdminBodyMeasurementListCreateView(APIView):
 
 
 class AdminBodyMeasurementDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def patch(self, request, patient_id, measurement_id):
         try:
@@ -851,7 +851,7 @@ class AdminBodyMeasurementDetailView(APIView):
 
 
 class AdminAppointmentStatusView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("randevular")]
 
     def patch(self, request, pk):
         try:
@@ -931,7 +931,7 @@ class PublicFaqListView(APIView):
 # ─── Diet Views ───────────────────────────────────────────────────────────────
 
 class AdminDietItemListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("diyet")]
 
     def get(self, request):
         items = DietItem.objects.filter(is_active=True)
@@ -946,7 +946,7 @@ class AdminDietItemListView(APIView):
 
 
 class AdminDietItemDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("diyet")]
 
     def _get(self, pk):
         try:
@@ -973,7 +973,7 @@ class AdminDietItemDetailView(APIView):
 
 
 class AdminPatientDietPlanListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request, patient_id):
         plans = (
@@ -1024,7 +1024,7 @@ class AdminPatientDietPlanListView(APIView):
 
 
 class AdminPatientDietPlanDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def _get(self, patient_id, plan_id):
         try:
@@ -1084,7 +1084,7 @@ class PatientDietPlanListView(APIView):
 
 class AdminAttendanceView(APIView):
     """Öğrenci için belirli bir güne ait katılım kaydı oluştur veya güncelle."""
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("randevular")]
 
     def post(self, request, patient_id):
         patient = User.objects.filter(pk=patient_id, is_staff=False).first()
@@ -1229,7 +1229,7 @@ AdminLandingWhyUsListView, AdminLandingWhyUsDetailView, PublicLandingWhyUsView =
 
 
 class AdminSendNotificationView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("bildirim-gonder")]
 
     def post(self, request):
         from .push_service import send_push_to_users
@@ -1267,7 +1267,7 @@ class AdminSendNotificationView(APIView):
 
 
 class AdminNotificationTemplateListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("bildirim-gonder")]
 
     def get(self, request):
         from .models import NotificationTemplate
@@ -1286,7 +1286,7 @@ class AdminNotificationTemplateListView(APIView):
 
 
 class AdminNotificationTemplateDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("bildirim-gonder")]
 
     def _get(self, pk):
         from .models import NotificationTemplate
@@ -1398,7 +1398,7 @@ class AdminOnboardingQuestionDetailView(APIView):
 
 
 class AdminPatientOnboardingAnswersView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request, pk):
         try:
@@ -1411,7 +1411,7 @@ class AdminPatientOnboardingAnswersView(APIView):
 
 class AdminDietProgramListView(APIView):
     """Global program listesi ve oluşturma."""
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("diyet")]
 
     def get(self, request):
         programs = DietProgram.objects.prefetch_related("days__meals__items__diet_item", "assignments")
@@ -1431,7 +1431,7 @@ class AdminDietProgramListView(APIView):
 
 class AdminDietProgramDetailView(APIView):
     """Global program detay, güncelleme, silme."""
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("diyet")]
 
     def _get(self, program_id):
         try:
@@ -1464,7 +1464,7 @@ class AdminDietProgramDetailView(APIView):
 
 class AdminPatientDietAssignmentListView(APIView):
     """Öğrenciye atanmış programları listele ve yeni ata."""
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request, patient_id):
         assignments = (
@@ -1488,7 +1488,7 @@ class AdminPatientDietAssignmentListView(APIView):
 
 class AdminPatientDietAssignmentDetailView(APIView):
     """Atama güncelle (aktif/pasif, not) veya sil."""
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def _get(self, patient_id, assignment_id):
         try:
@@ -1517,7 +1517,7 @@ class AdminPatientDietAssignmentDetailView(APIView):
 
 
 class AdminImpersonateView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def post(self, request, pk):
         from rest_framework_simplejwt.tokens import RefreshToken
@@ -1535,7 +1535,7 @@ class AdminImpersonateView(APIView):
 
 
 class AdminAuditLogView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("sistem-loglari")]
 
     def get(self, request):
         from accounts.models import AuditLog
@@ -1592,7 +1592,7 @@ class AdminAuditLogView(APIView):
 
 class AdminUserListCreateView(APIView):
     """Superuser: admin kullanıcıları listele ve yeni admin ekle."""
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("kullanici-yonetimi")]
 
     def _require_superuser(self, request):
         if not request.user.is_superuser:
@@ -1680,7 +1680,7 @@ class AdminUserListCreateView(APIView):
 
 class AdminUserDetailView(APIView):
     """Superuser: admin kullanıcısını güncelle veya sil."""
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("kullanici-yonetimi")]
 
     def _require_superuser(self, request):
         if not request.user.is_superuser:

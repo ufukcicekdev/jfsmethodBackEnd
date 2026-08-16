@@ -4,7 +4,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsStaff
+from accounts.permissions import IsStaff, HasSection
 
 from rest_framework import serializers as drf_serializers
 
@@ -41,7 +41,7 @@ class NotificationScheduleSerializer(drf_serializers.ModelSerializer):
 
 
 class NotificationScheduleListCreateView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("bildirim-zamanlama")]
 
     def get(self, request):
         schedules = NotificationSchedule.objects.all()
@@ -58,7 +58,7 @@ class NotificationScheduleListCreateView(APIView):
 
 
 class NotificationScheduleDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("bildirim-zamanlama")]
 
     def get_object(self, pk):
         try:
@@ -108,7 +108,7 @@ class FCMDeviceDebugView(APIView):
 
 class NotificationScheduleTestView(APIView):
     """Schedule'ı zaman ve saat kontrolü olmadan anında gönderir (test)."""
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("bildirim-zamanlama")]
 
     def post(self, request, pk):
         try:
@@ -137,7 +137,7 @@ class NotificationScheduleTestView(APIView):
 
 
 class AdminExerciseListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("egzersizler")]
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
@@ -164,7 +164,7 @@ class AdminExerciseListView(APIView):
 
 
 class AdminExerciseDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("egzersizler")]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_object(self, exercise_id):
@@ -207,7 +207,7 @@ class AdminExerciseDetailView(APIView):
 
 
 class AdminPatientExerciseListCreateView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request, pk):
         try:
@@ -273,7 +273,7 @@ class AdminPatientExerciseListCreateView(APIView):
 
 
 class AdminPatientExerciseDeactivateView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def patch(self, request, pk, assignment_id):
         try:
@@ -294,7 +294,7 @@ class AdminPatientExerciseDeactivateView(APIView):
 
 class AdminPatientWellnessHistoryView(APIView):
     """Son 14 günlük su, adım ve egzersiz tamamlama geçmişi."""
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request, pk):
         from django.contrib.auth.models import User
@@ -372,7 +372,7 @@ def _build_tree(categories, parent_id=None):
 
 
 class AdminCategoryTreeView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("egzersizler")]
 
     def get(self, request):
         cat_type = request.query_params.get("type")
@@ -407,7 +407,7 @@ class AdminCategoryTreeView(APIView):
 
 
 class AdminCategoryDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("egzersizler")]
 
     def _get(self, pk):
         try:
@@ -476,7 +476,7 @@ class ExerciseProgramSerializer(drf_serializers.ModelSerializer):
 
 
 class AdminExerciseProgramListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("programlar")]
 
     def get(self, request):
         qs = ExerciseProgram.objects.prefetch_related("days__items__exercise").all()
@@ -490,7 +490,7 @@ class AdminExerciseProgramListView(APIView):
 
 
 class AdminExerciseProgramDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("programlar")]
 
     def _get(self, pk):
         try:
@@ -522,7 +522,7 @@ class AdminExerciseProgramDetailView(APIView):
 
 
 class AdminProgramDayListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("programlar")]
 
     def post(self, request, program_pk):
         try:
@@ -537,7 +537,7 @@ class AdminProgramDayListView(APIView):
 
 
 class AdminProgramDayDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("programlar")]
 
     def _get(self, pk):
         try:
@@ -563,7 +563,7 @@ class AdminProgramDayDetailView(APIView):
 
 
 class AdminProgramItemListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("programlar")]
 
     def post(self, request, day_pk):
         try:
@@ -577,7 +577,7 @@ class AdminProgramItemListView(APIView):
 
 
 class AdminProgramItemDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("programlar")]
 
     def _get(self, pk):
         try:
@@ -614,7 +614,7 @@ class ProductPackageSerializer(drf_serializers.ModelSerializer):
 
 
 class AdminProductPackageListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("paketler")]
 
     def get(self, request):
         qs = ProductPackage.objects.select_related("exercise_program", "diet_program").all()
@@ -628,7 +628,7 @@ class AdminProductPackageListView(APIView):
 
 
 class AdminProductPackageDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("paketler")]
 
     def _get(self, pk):
         try:
@@ -666,7 +666,7 @@ class UserPackageAssignmentSerializer(drf_serializers.ModelSerializer):
 
 
 class AdminPackageAssignmentListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request):
         qs = UserPackageAssignment.objects.select_related("user", "package").all()
@@ -680,7 +680,7 @@ class AdminPackageAssignmentListView(APIView):
 
 
 class AdminPackageAssignmentDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def _get(self, pk):
         try:
@@ -730,7 +730,7 @@ class AdminMealLogSerializer(drf_serializers.ModelSerializer):
 
 
 class AdminPatientMealLogListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request, patient_id):
         from django.utils.dateparse import parse_date
@@ -772,7 +772,7 @@ class UserNotifScheduleSerializer(drf_serializers.ModelSerializer):
 
 
 class AdminUserNotifScheduleListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request, patient_id):
         qs = UserNotificationSchedule.objects.filter(user_id=patient_id)
@@ -787,7 +787,7 @@ class AdminUserNotifScheduleListView(APIView):
 
 
 class AdminUserNotifScheduleDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def patch(self, request, patient_id, pk):
         try:
@@ -811,7 +811,7 @@ class AdminUserNotifScheduleDetailView(APIView):
 # ── Admin: Program Exercise Logs ──────────────────────────────────────────────
 
 class AdminPatientProgramLogView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("ogrenciler")]
 
     def get(self, request, patient_id):
         qs = (
@@ -874,7 +874,7 @@ class ProgramMealEntrySerializer(drf_serializers.ModelSerializer):
 
 
 class AdminProgramMealEntryListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("programlar")]
 
     def post(self, request, day_pk):
         try:
@@ -888,7 +888,7 @@ class AdminProgramMealEntryListView(APIView):
 
 
 class AdminProgramMealEntryDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("programlar")]
 
     def _get(self, pk):
         try:

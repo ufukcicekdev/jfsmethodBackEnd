@@ -11,7 +11,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsStaff
+from accounts.permissions import IsStaff, HasSection
 
 
 def markdown_to_html(text: str) -> str:
@@ -87,7 +87,7 @@ from .serializers import (
 # ── Image upload ─────────────────────────────────────────────────────────────
 
 class AdminBlogImageUploadView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("blog")]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
@@ -149,7 +149,7 @@ class PublicBlogDetailView(APIView):
 # ── Admin endpoints ───────────────────────────────────────────────────────────
 
 class AdminBlogPostListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("blog")]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
@@ -170,7 +170,7 @@ class AdminBlogPostListView(APIView):
 
 
 class AdminBlogPostDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("blog")]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def _get(self, pk):
@@ -204,7 +204,7 @@ class AdminBlogPostDetailView(APIView):
 
 
 class AdminBlogCategoryListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("blog")]
 
     def get(self, request):
         from .models import BlogCategory
@@ -222,7 +222,7 @@ class AdminBlogCategoryListView(APIView):
 
 
 class AdminBlogCategoryDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("blog")]
 
     def _get(self, pk):
         from .models import BlogCategory
@@ -261,7 +261,7 @@ class PublicBlogCategoryListView(APIView):
 
 
 class AdminBlogTopicListView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("blog")]
 
     def get(self, request):
         topics = BlogTopic.objects.all()
@@ -276,7 +276,7 @@ class AdminBlogTopicListView(APIView):
 
 
 class AdminBlogTopicDetailView(APIView):
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("blog")]
 
     def delete(self, request, pk):
         try:
@@ -288,7 +288,7 @@ class AdminBlogTopicDetailView(APIView):
 
 class AdminBlogGenerateView(APIView):
     """Gemini API kullanarak belirtilen konu için blog yazısı üretir."""
-    permission_classes = [IsStaff]
+    permission_classes = [HasSection("blog")]
 
     def post(self, request):
         topic_id = request.data.get("topic_id")
