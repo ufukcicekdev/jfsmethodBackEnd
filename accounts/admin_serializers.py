@@ -193,13 +193,25 @@ class AdminPatientListSerializer(serializers.ModelSerializer):
         return sum(p.remaining_sessions for p in pkgs)
 
     def get_came_count(self, obj):
-        return AttendanceRecord.objects.filter(patient=obj, status="came").count()
+        # Silinen paketlerin kayıtları DB'de kalır (session_package=NULL) ama
+        # admin toplamlarında sayılmaz; yalnızca var olan pakete bağlı kayıtlar.
+        return AttendanceRecord.objects.filter(
+            patient=obj, status="came", session_package__isnull=False
+        ).count()
 
     def get_no_show_count(self, obj):
-        return AttendanceRecord.objects.filter(patient=obj, status="no_show").count()
+        return AttendanceRecord.objects.filter(
+            patient=obj, status="no_show", session_package__isnull=False
+        ).count()
 
     def get_last_attended(self, obj):
-        rec = AttendanceRecord.objects.filter(patient=obj, status="came").order_by("-date").first()
+        rec = (
+            AttendanceRecord.objects.filter(
+                patient=obj, status="came", session_package__isnull=False
+            )
+            .order_by("-date")
+            .first()
+        )
         return rec.date.isoformat() if rec else None
 
     def get_today_attendance(self, obj):
@@ -296,9 +308,26 @@ class AdminPatientDetailSerializer(AdminPatientListSerializer):
             appointment_datetime__gte=now,
         ).count()
 
-        # Geldi/Gelmedi sayıları AttendanceRecord'dan (liste kartındaki butonlarla aynı kaynak)
-        completed = AttendanceRecord.objects.filter(patient=obj, status="came").count()
-        no_show = AttendanceRecord.objects.filter(patient=obj, status="no_show").count()
+        # Ana sayaçlar yalnızca AKTİF paketlerin kayıtlarını gösterir.
+        # (Silinen paket = NULL zaten hariç; pasifleştirilen paket de ana sayaçta yok.)
+        completed = AttendanceRecord.objects.filter(
+            patient=obj, status="came", session_package__is_active=True
+        ).count()
+        no_show = AttendanceRecord.objects.filter(
+            patient=obj, status="no_show", session_package__is_active=True
+        ).count()
+
+        # "Bugüne kadar toplam geldi" — ömür boyu, var olan tüm paketler
+        # (aktif + pasif) dahil; yalnızca silinen paketlerin kayıtları hariç.
+        total_came = AttendanceRecord.objects.filter(
+            patient=obj, status="came", session_package__isnull=False
+        ).count()
+
+        # Aktif paketlerin toplam seans hakkı (ana "Toplam" göstergesi)
+        active_total_sessions = sum(
+            p.total_sessions
+            for p in SessionPackage.objects.filter(patient=obj, is_active=True)
+        )
 
         history = [
             {
@@ -313,6 +342,8 @@ class AdminPatientDetailSerializer(AdminPatientListSerializer):
         return {
             "completed": completed,
             "no_show": no_show,
+            "total_sessions": active_total_sessions,
+            "total_came": total_came,
             "cancelled": cancelled,
             "upcoming": upcoming,
             "history": history,

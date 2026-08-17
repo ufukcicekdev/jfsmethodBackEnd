@@ -122,6 +122,7 @@ class MyPenaltiesView(APIView):
             AttendanceRecord.objects.filter(
                 patient=request.user,
                 status="no_show",
+                session_package__isnull=False,  # silinen paketlerin kayıtları gösterilmez
             )
             .order_by("-date")
             .values("date", "note", "created_at")
@@ -138,7 +139,10 @@ class MyAttendanceHistoryView(APIView):
         from .models import AttendanceRecord
 
         records = (
-            AttendanceRecord.objects.filter(patient=request.user)
+            AttendanceRecord.objects.filter(
+                patient=request.user,
+                session_package__isnull=False,  # silinen paketlerin kayıtları gösterilmez
+            )
             .order_by("-date")
             .values("date", "status", "note")
         )
