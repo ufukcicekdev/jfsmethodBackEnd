@@ -468,6 +468,7 @@ class PostureAssessment(models.Model):
     metrics = models.JSONField(default=dict, blank=True)
     summary = models.TextField(blank=True)
     note = models.TextField(blank=True)
+    admin_note = models.TextField(blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

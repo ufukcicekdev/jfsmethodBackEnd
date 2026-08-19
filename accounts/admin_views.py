@@ -495,12 +495,29 @@ class AdminPatientPostureListCreateView(APIView):
 class AdminPatientPostureDeleteView(APIView):
     permission_classes = [HasSection("ogrenciler")]
 
-    def delete(self, request, pk, assessment_id):
+    def get_object(self, pk, assessment_id):
         try:
-            assessment = PostureAssessment.objects.get(
-                pk=assessment_id, patient_id=pk
-            )
+            return PostureAssessment.objects.get(pk=assessment_id, patient_id=pk)
         except PostureAssessment.DoesNotExist:
+            return None
+
+    def patch(self, request, pk, assessment_id):
+        assessment = self.get_object(pk, assessment_id)
+        if not assessment:
+            return Response({"detail": "Analiz bulunamadı."}, status=404)
+
+        # Yalnızca klinisyenin kendi yorumu güncellenir.
+        assessment.admin_note = request.data.get("admin_note", assessment.admin_note)
+        assessment.save(update_fields=["admin_note"])
+        return Response(
+            PostureAssessmentSerializer(
+                assessment, context={"request": request}
+            ).data
+        )
+
+    def delete(self, request, pk, assessment_id):
+        assessment = self.get_object(pk, assessment_id)
+        if not assessment:
             return Response({"detail": "Analiz bulunamadı."}, status=404)
 
         if assessment.image:

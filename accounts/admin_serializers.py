@@ -487,6 +487,7 @@ class PostureAssessmentSerializer(serializers.ModelSerializer):
             "metrics",
             "summary",
             "note",
+            "admin_note",
             "created_by_name",
             "created_at",
         ]
