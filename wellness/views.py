@@ -166,6 +166,25 @@ class PatientProgressPhotoListView(APIView):
         )
 
 
+class PatientPostureAssessmentView(APIView):
+    """Klinisyenin eklediği postür analizlerini hastaya salt-okunur gösterir."""
+
+    permission_classes = [IsPatient]
+
+    def get(self, request):
+        from accounts.models import PostureAssessment
+        from accounts.admin_serializers import PostureAssessmentSerializer
+
+        assessments = PostureAssessment.objects.filter(
+            patient=request.user
+        ).select_related("created_by")
+        return Response(
+            PostureAssessmentSerializer(
+                assessments, many=True, context={"request": request}
+            ).data
+        )
+
+
 class PatientProgressPhotoDeleteView(APIView):
     permission_classes = [IsPatient]
 
