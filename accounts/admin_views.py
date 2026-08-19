@@ -509,6 +509,106 @@ class AdminPatientPostureDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class AdminPatientPostureInterpretView(APIView):
+    """Cihazda hesaplanan postür açılarını + işaretlenmiş görseli Gemini'ye
+    gönderip Türkçe klinik yorum/gözlem taslağı üretir. Sonuç kaydedilmez;
+    klinisyen düzenleyip kaydeder."""
+
+    permission_classes = [HasSection("ogrenciler")]
+    parser_classes = [MultiPartParser, FormParser]
+
+    VIEW_LABELS = {"front": "Önden", "side": "Yandan", "back": "Arkadan"}
+
+    def post(self, request, pk):
+        import base64
+        import json
+        import os
+        import urllib.error
+        import urllib.request
+
+        view = request.data.get("view", "front")
+        raw_metrics = request.data.get("metrics", "[]")
+        try:
+            metrics = json.loads(raw_metrics) if isinstance(raw_metrics, str) else raw_metrics
+        except (ValueError, TypeError):
+            metrics = []
+
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        if not api_key:
+            return Response({"detail": "GEMINI_API_KEY tanımlı değil."}, status=500)
+
+        image = request.FILES.get("image")
+
+        # Ölçümleri okunur metne çevir; güvenilmez olanları işaretle.
+        lines = []
+        for m in metrics:
+            if not isinstance(m, dict):
+                continue
+            label = m.get("label", m.get("key", "?"))
+            value = m.get("value")
+            unit = m.get("unit", "")
+            if value is None or m.get("status") == "unknown":
+                lines.append(f"- {label}: ölçülemedi (nokta görünmüyor / güvenilmez)")
+            else:
+                flag = " [GÜVENİLMEZ — foto/açı kontrol]" if m.get("reliable") is False else ""
+                detail = m.get("detail", "")
+                lines.append(f"- {label}: {value}{unit} ({detail}){flag}")
+        metrics_text = "\n".join(lines) if lines else "(ölçüm yok)"
+
+        view_label = self.VIEW_LABELS.get(view, view)
+        prompt = (
+            "Sen deneyimli bir fizyoterapistsin. Aşağıda bir hastanın "
+            f"{view_label} çekilmiş postür fotoğrafından cihazda (BlazePose) "
+            "hesaplanmış yaklaşık duruş açıları ve işaretlenmiş görseli var. "
+            "Bu ölçümler tek 2D fotoğraftan çıkarıldığı için yaklaşıktır; "
+            "kesin tanı aracı değildir.\n\n"
+            f"Ölçümler:\n{metrics_text}\n\n"
+            "Görseli ve ölçümleri birlikte değerlendirip Türkçe, kısa ve "
+            "klinik bir DEĞERLENDIRME NOTU yaz. Şu bölümleri kullan:\n"
+            "1) Genel gözlem (2-3 cümle)\n"
+            "2) Dikkat çeken bulgular (madde madde)\n"
+            "3) Öneriler / egzersiz yönü (madde madde)\n\n"
+            "Güvenilmez veya ölçülemeyen değerlere kesin yorum yapma, "
+            "gerekiyorsa fotoğrafın yeniden çekilmesini öner. Kesin tıbbi tanı "
+            "koyma; bilgilendirme amaçlı yaz. Sadece not metnini döndür, "
+            "başlık/JSON/markdown kod bloğu ekleme."
+        )
+
+        parts = [{"text": prompt}]
+        if image:
+            raw = image.read()
+            mime = getattr(image, "content_type", None) or "image/png"
+            parts.append({
+                "inline_data": {
+                    "mime_type": mime,
+                    "data": base64.b64encode(raw).decode("ascii"),
+                }
+            })
+
+        url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            f"gemini-2.5-flash:generateContent?key={api_key}"
+        )
+        payload = json.dumps({"contents": [{"parts": parts}]}).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=payload, headers={"Content-Type": "application/json"}, method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                data = json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            return Response({"detail": f"Gemini API hatası: {e.read().decode()}"}, status=502)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=502)
+
+        try:
+            note = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except (KeyError, IndexError):
+            return Response({"detail": "Gemini yanıtı çözümlenemedi."}, status=502)
+
+        return Response({"note": note})
+
+
 class AdminPatientPackageListCreateView(APIView):
     permission_classes = [HasSection("ogrenciler")]
 

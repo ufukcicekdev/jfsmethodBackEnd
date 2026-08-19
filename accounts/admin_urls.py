@@ -45,6 +45,7 @@ from .admin_views import (
     AdminPatientPhotoDeleteView,
     AdminPatientPhotoListCreateView,
     AdminPatientPostureDeleteView,
+    AdminPatientPostureInterpretView,
     AdminPatientPostureListCreateView,
     AdminPatientSetPasswordView,
     AdminPatientWeightView,
@@ -106,6 +107,11 @@ urlpatterns = [
         "patients/<int:pk>/posture/",
         AdminPatientPostureListCreateView.as_view(),
         name="admin-patient-posture",
+    ),
+    path(
+        "patients/<int:pk>/posture/interpret/",
+        AdminPatientPostureInterpretView.as_view(),
+        name="admin-patient-posture-interpret",
     ),
     path(
         "patients/<int:pk>/posture/<int:assessment_id>/",

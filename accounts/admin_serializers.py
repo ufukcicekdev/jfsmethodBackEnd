@@ -486,6 +486,7 @@ class PostureAssessmentSerializer(serializers.ModelSerializer):
             "image_url",
             "metrics",
             "summary",
+            "note",
             "created_by_name",
             "created_at",
         ]
@@ -508,7 +509,7 @@ class PostureAssessmentSerializer(serializers.ModelSerializer):
 class PostureAssessmentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostureAssessment
-        fields = ["image", "view", "metrics", "summary"]
+        fields = ["image", "view", "metrics", "summary", "note"]
 
     def validate_image(self, value):
         if value.size > MAX_IMAGE_SIZE:
