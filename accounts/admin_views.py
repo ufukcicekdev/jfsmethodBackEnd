@@ -478,18 +478,9 @@ class AdminPatientPostureListCreateView(APIView):
         if not patient:
             return Response({"detail": "Öğrenci bulunamadı."}, status=404)
 
-        # Çoklu form gönderiminde `metrics` JSON metni olarak gelir.
-        data = request.data.copy()
-        raw_metrics = data.get("metrics")
-        if isinstance(raw_metrics, str):
-            import json
-
-            try:
-                data["metrics"] = json.loads(raw_metrics) if raw_metrics else {}
-            except (ValueError, TypeError):
-                data["metrics"] = {}
-
-        serializer = PostureAssessmentCreateSerializer(data=data)
+        # Çoklu form gönderiminde `metrics` JSON metni olarak gelir; DRF'nin
+        # JSONField'i bu metni doğrudan çözer, elle ön ayrıştırma yapılmamalı.
+        serializer = PostureAssessmentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         assessment = serializer.save(patient=patient, created_by=request.user)
 
